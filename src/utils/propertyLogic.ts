@@ -1,9 +1,10 @@
 import {
   LOCALITIES,
   WEBSITE_URL,
+  WHATSAPP_COMMUNITY_NAME,
   WHATSAPP_COMMUNITY_URL,
   WHATSAPP_NUMBER_DIGITS,
-  WHATSAPP_NUMBER_LOCAL,
+  WHATSAPP_NUMBER_DISPLAY,
 } from '../data/properties';
 import {
   LocalityConfig,
@@ -144,39 +145,31 @@ export function buildPropertyShareText(property: PropertyListing, propertyUrl: s
         ? formatINR(property.brokerageAmount)
         : property.brokerageStatus;
 
-  const facilitiesLines =
+  const facilitiesText =
     property.facilities.length > 0
-      ? property.facilities.map((facility) => `✅ ${facility}`)
-      : ['✅ Basic Utilities Available'];
+      ? property.facilities.join(', ')
+      : 'Basic Utilities Available';
 
   const locationDisplay = property.locality.toLowerCase().includes('pune')
     ? property.locality
     : `${property.locality}, Pune`;
 
   return [
-    `🏠 ${property.propertyType} FLAT AVAILABLE FOR RENT`,
+    `🏠 ${property.title} (Available for Rent)`,
+    `📍 ${locationDisplay}`,
     '',
-    `📍 Location: ${locationDisplay}`,
-    '',
-    `💰 Rent: ${formatINR(property.monthlyRent)}`,
-    `🔐 Deposit: ${formatDepositLabel(property.securityDeposit)}`,
-    `🤝 Brokerage: ${brokerageText}`,
-    `🛋️ Furnishing: ${property.furnishing}`,
-    '',
-    '🏡 Facilities:',
-    ...facilitiesLines,
-    '',
+    `💰 Rent: ${formatINR(property.monthlyRent)}/month | 🔐 Deposit: ${formatDepositLabel(property.securityDeposit)}`,
+    `🤝 Brokerage: ${brokerageText} | 🛋️ ${property.furnishing}`,
     `👨‍👩‍👧 Suitable for: ${property.suitableFor}`,
+    `🏡 Facilities: ${facilitiesText}`,
     '',
-    '📞 Contact: WithBroker',
-    `📲 WhatsApp: ${WHATSAPP_NUMBER_LOCAL}`,
-    `💬 Join WhatsApp Group: ${WHATSAPP_COMMUNITY_URL}`,
+    `📲 WhatsApp: ${WHATSAPP_NUMBER_DISPLAY} (WithBroker)`,
+    `👥 WhatsApp Group — ${WHATSAPP_COMMUNITY_NAME}:`,
+    WHATSAPP_COMMUNITY_URL,
     `🌐 Website: ${WEBSITE_URL}`,
+    `🔗 Property Link: ${propertyUrl}`,
     '',
-    `🔗 View Property: ${propertyUrl}`,
-    '',
-    'WITHBROKER',
-    'RENT • SEARCH • CONNECT',
+    'WITHBROKER • RENT • SEARCH • CONNECT',
   ].join('\n');
 }
 

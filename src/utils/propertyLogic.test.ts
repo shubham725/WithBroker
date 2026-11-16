@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LOCALITIES, SAMPLE_PROPERTIES, WEBSITE_URL, WHATSAPP_COMMUNITY_URL } from '../data/properties';
+import {
+  LOCALITIES,
+  SAMPLE_PROPERTIES,
+  WEBSITE_URL,
+  WHATSAPP_COMMUNITY_NAME,
+  WHATSAPP_COMMUNITY_URL,
+} from '../data/properties';
 import {
   buildEmailSharePostUrl,
   buildPropertyShareText,
@@ -125,21 +131,20 @@ test('buildWhatsAppInquiryUrl encodes dynamic property details to 919834626078',
   assert.ok(decoded.includes('https://withbroker.example/?flat=wb-flat-2'));
 });
 
-test('buildPropertyShareText produces complete formatted advertisement with WhatsApp group link', () => {
+test('buildPropertyShareText produces optimized advertisement with group name, group link, and website link', () => {
   const prop = SAMPLE_PROPERTIES[0];
-  const propUrl = 'https://withbroker.example/?flat=wb-flat-1';
+  const propUrl = 'https://withbroker.vercel.app/?flat=wb-flat-1#flats';
   const ad = buildPropertyShareText(prop, propUrl);
-  assert.ok(ad.includes('🏠 1BHK FLAT AVAILABLE FOR RENT'));
-  assert.ok(ad.includes('📍 Location: Near Phoenix Mall, Wadgaon Sheri, Pune'));
-  assert.ok(ad.includes('💰 Rent: ₹21,000'));
-  assert.ok(ad.includes('🔐 Deposit: On Inquiry'));
-  assert.ok(ad.includes('🤝 Brokerage: Applicable'));
-  assert.ok(ad.includes('📲 WhatsApp: 9834626078'));
-  assert.ok(ad.includes(`💬 Join WhatsApp Group: ${WHATSAPP_COMMUNITY_URL}`));
+  assert.ok(ad.includes('🏠 1BHK Furnished Flat Near Phoenix Mall (Available for Rent)'));
+  assert.ok(ad.includes('📍 Near Phoenix Mall, Wadgaon Sheri, Pune'));
+  assert.ok(ad.includes('💰 Rent: ₹21,000/month | 🔐 Deposit: On Inquiry'));
+  assert.ok(ad.includes('🤝 Brokerage: Applicable | 🛋️ Fully Furnished'));
+  assert.ok(ad.includes('📲 WhatsApp: +91 9834626078 (WithBroker)'));
+  assert.ok(ad.includes(`👥 WhatsApp Group — ${WHATSAPP_COMMUNITY_NAME}:`));
+  assert.ok(ad.includes(WHATSAPP_COMMUNITY_URL));
   assert.ok(ad.includes(`🌐 Website: ${WEBSITE_URL}`));
-  assert.ok(ad.includes(`🔗 View Property: ${propUrl}`));
-  assert.ok(ad.includes('WITHBROKER'));
-  assert.ok(ad.includes('RENT • SEARCH • CONNECT'));
+  assert.ok(ad.includes(`🔗 Property Link: ${propUrl}`));
+  assert.ok(ad.includes('WITHBROKER • RENT • SEARCH • CONNECT'));
 
   const tgUrl = buildTelegramSharePostUrl(ad, propUrl);
   assert.ok(tgUrl.startsWith('https://t.me/share/url?url='));
@@ -147,7 +152,7 @@ test('buildPropertyShareText produces complete formatted advertisement with What
 
   const smsUrl = buildSmsSharePostUrl(ad);
   assert.ok(smsUrl.startsWith('sms:?&body='));
-  assert.ok(decodeURIComponent(smsUrl).includes('1BHK FLAT AVAILABLE FOR RENT'));
+  assert.ok(decodeURIComponent(smsUrl).includes('1BHK Furnished Flat Near Phoenix Mall'));
 
   const mailUrl = buildEmailSharePostUrl(prop, ad);
   assert.ok(mailUrl.startsWith('mailto:?subject='));

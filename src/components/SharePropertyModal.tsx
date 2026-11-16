@@ -144,8 +144,8 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
             id="share-post-preview"
             readOnly
             value={shareText}
-            rows={12}
-            className="w-full resize-none rounded-xl border border-[#090A14]/10 bg-[#F9F8FC] p-4 font-sans text-xs sm:text-sm leading-relaxed text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
+            rows={15}
+            className="w-full resize-none rounded-xl border border-[#090A14]/10 bg-[#F9F8FC] p-4 font-sans text-xs sm:text-[13px] leading-relaxed text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
           />
 
           {shareFeedback && (
