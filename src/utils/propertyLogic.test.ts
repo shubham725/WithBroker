@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LOCALITIES, SAMPLE_PROPERTIES, WHATSAPP_COMMUNITY_URL } from '../data/properties';
+import { LOCALITIES, SAMPLE_PROPERTIES, WEBSITE_URL, WHATSAPP_COMMUNITY_URL } from '../data/properties';
 import {
   buildEmailSharePostUrl,
   buildPropertyShareText,
@@ -136,6 +136,8 @@ test('buildPropertyShareText produces complete formatted advertisement with What
   assert.ok(ad.includes('🤝 Brokerage: Applicable'));
   assert.ok(ad.includes('📲 WhatsApp: 9834626078'));
   assert.ok(ad.includes(`💬 Join WhatsApp Group: ${WHATSAPP_COMMUNITY_URL}`));
+  assert.ok(ad.includes(`🌐 Website: ${WEBSITE_URL}`));
+  assert.ok(ad.includes(`🔗 View Property: ${propUrl}`));
   assert.ok(ad.includes('WITHBROKER'));
   assert.ok(ad.includes('RENT • SEARCH • CONNECT'));
 

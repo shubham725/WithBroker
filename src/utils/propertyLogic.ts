@@ -1,5 +1,6 @@
 import {
   LOCALITIES,
+  WEBSITE_URL,
   WHATSAPP_COMMUNITY_URL,
   WHATSAPP_NUMBER_DIGITS,
   WHATSAPP_NUMBER_LOCAL,
@@ -170,8 +171,9 @@ export function buildPropertyShareText(property: PropertyListing, propertyUrl: s
     '📞 Contact: WithBroker',
     `📲 WhatsApp: ${WHATSAPP_NUMBER_LOCAL}`,
     `💬 Join WhatsApp Group: ${WHATSAPP_COMMUNITY_URL}`,
+    `🌐 Website: ${WEBSITE_URL}`,
     '',
-    `🌐 View Property: ${propertyUrl}`,
+    `🔗 View Property: ${propertyUrl}`,
     '',
     'WITHBROKER',
     'RENT • SEARCH • CONNECT',

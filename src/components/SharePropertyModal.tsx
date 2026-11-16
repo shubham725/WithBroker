@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Mail, MessageSquare, Send, Share2, X } from 'lucide-react';
+import { WEBSITE_URL } from '../data/properties';
 import { PropertyListing } from '../types/property';
 import {
   buildEmailSharePostUrl,
@@ -42,10 +43,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
 
   if (!property) return null;
 
-  const propertyUrl =
-    typeof window !== 'undefined'
-      ? getPropertyDirectUrl(window.location.href, property.id)
-      : `https://withbroker.in/?flat=${property.id}`;
+  const propertyUrl = getPropertyDirectUrl(WEBSITE_URL, property.id);
   const shareText = buildPropertyShareText(property, propertyUrl);
   const whatsAppShareUrl = buildWhatsAppSharePostUrl(shareText);
   const telegramShareUrl = buildTelegramSharePostUrl(shareText, propertyUrl);
@@ -124,7 +122,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
               Share Property Text Post
             </h2>
             <p className="truncate text-xs text-[#656275]">
-              Includes WhatsApp Group link for {property.title}
+              Includes Website & WhatsApp Group link for {property.title}
             </p>
           </div>
           <button

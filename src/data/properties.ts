@@ -4,6 +4,7 @@ export const WHATSAPP_NUMBER_DISPLAY = '+91 9834626078';
 export const WHATSAPP_NUMBER_DIGITS = '919834626078';
 export const WHATSAPP_NUMBER_LOCAL = '9834626078';
 export const WHATSAPP_COMMUNITY_URL = 'https://chat.whatsapp.com/CgdMS4NKPhREBqfuUPRcct';
+export const WEBSITE_URL = 'https://withbroker.vercel.app/';
 export const WITHBROKER_LOGO_URL = '/assets/aistudio/withbroker-logo.png';
 
 /**

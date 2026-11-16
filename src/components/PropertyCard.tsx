@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Sofa,
 } from 'lucide-react';
+import { WEBSITE_URL } from '../data/properties';
 import { PropertyListing } from '../types/property';
 import {
   buildWhatsAppInquiryUrl,
@@ -43,7 +44,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const pageUrl =
     typeof window !== 'undefined'
       ? getPropertyDirectUrl(window.location.href, property.id)
-      : `https://withbroker.in/?flat=${property.id}`;
+      : getPropertyDirectUrl(WEBSITE_URL, property.id);
   const whatsAppUrl = buildWhatsAppInquiryUrl(property, pageUrl);
 
   const handlePrevPhoto = (e: React.MouseEvent) => {
