@@ -7,6 +7,7 @@ import {
   RotateCcw,
   Sofa,
 } from 'lucide-react';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import {
   FurnishingStatus,
   LocalityConfig,
@@ -272,64 +273,96 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
           </div>
         </div>
 
-        {/* Listings Content: Empty / Map / 3-Col Cards */}
-        {properties.length === 0 ? (
-          <div
-            data-testid="empty-listings-state"
-            className="mt-6 rounded-2xl border border-[#090A14]/8 bg-white px-6 py-14 text-center shadow-2xs"
-          >
-            <h3 className="font-display text-lg font-bold text-[#090A14]">
-              {onlySavedValue ? 'No saved flats yet' : 'No matching flats found'}
-            </h3>
-            <p className="mx-auto mt-1.5 max-w-md text-sm text-[#656275]">
-              {onlySavedValue
-                ? 'Save any flat card to shortlist apartments for quick comparison.'
-                : 'Try selecting another Pune locality, relaxing furnishing filters, or increasing your monthly budget.'}
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={onResetFilters}
-                className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-[#6B1CD4] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#5412AD]"
-              >
-                <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                <span>Show All Flats</span>
-              </button>
-              <a
-                href={buildGeneralWhatsAppUrl(
-                  'Hello WithBroker, I did not find an exact match on the website. Can you share available flats in Pune?'
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-[#090A14]/15 bg-white px-5 py-2.5 text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
-              >
-                <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
-                <span>Ask on WhatsApp</span>
-              </a>
-            </div>
-          </div>
-        ) : viewMode === 'map' ? (
-          <div className="mt-6">
-            <PuneListingsMap
-              properties={properties}
-              onSelectProperty={onViewDetails}
-              heightClass="h-[520px]"
-            />
-          </div>
-        ) : (
-          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {properties.map((property) => (
-              <PropertyCard
-                key={property.id}
-                property={property}
-                isSaved={savedIds.includes(property.id)}
-                onToggleSave={onToggleSave}
-                onViewDetails={onViewDetails}
-                onShare={onShare}
+        {/* Listings Content: Empty / Map / 3-Col Animated Cards */}
+        <MotionConfig reducedMotion="user">
+          {properties.length === 0 ? (
+            <motion.div
+              key="empty-listings"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              data-testid="empty-listings-state"
+              className="mt-6 rounded-2xl border border-[#090A14]/8 bg-white px-6 py-14 text-center shadow-2xs"
+            >
+              <h3 className="font-display text-lg font-bold text-[#090A14]">
+                {onlySavedValue ? 'No saved flats yet' : 'No matching flats found'}
+              </h3>
+              <p className="mx-auto mt-1.5 max-w-md text-sm text-[#656275]">
+                {onlySavedValue
+                  ? 'Save any flat card to shortlist apartments for quick comparison.'
+                  : 'Try selecting another Pune locality, relaxing furnishing filters, or increasing your monthly budget.'}
+              </p>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={onResetFilters}
+                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-[#6B1CD4] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#5412AD]"
+                >
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                  <span>Show All Flats</span>
+                </button>
+                <a
+                  href={buildGeneralWhatsAppUrl(
+                    'Hello WithBroker, I did not find an exact match on the website. Can you share available flats in Pune?'
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-[#090A14]/15 bg-white px-5 py-2.5 text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                >
+                  <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+                  <span>Ask on WhatsApp</span>
+                </a>
+              </div>
+            </motion.div>
+          ) : viewMode === 'map' ? (
+            <motion.div
+              key="map-listings"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="mt-6"
+            >
+              <PuneListingsMap
+                properties={properties}
+                onSelectProperty={onViewDetails}
+                heightClass="h-[520px]"
               />
-            ))}
-          </div>
-        )}
+            </motion.div>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <AnimatePresence mode="popLayout" initial={false}>
+                {properties.map((property) => (
+                  <motion.div
+                    key={property.id}
+                    layout="position"
+                    initial={{ opacity: 0, y: 10, scale: 0.985 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{
+                      opacity: 0,
+                      scale: 0.97,
+                      transition: { duration: 0.14, ease: 'easeOut' },
+                    }}
+                    transition={{
+                      layout: { type: 'spring', stiffness: 420, damping: 34, mass: 0.8 },
+                      opacity: { duration: 0.18, ease: 'easeOut' },
+                      y: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+                      scale: { duration: 0.18, ease: 'easeOut' },
+                    }}
+                    className="h-full w-full"
+                  >
+                    <PropertyCard
+                      property={property}
+                      isSaved={savedIds.includes(property.id)}
+                      onToggleSave={onToggleSave}
+                      onViewDetails={onViewDetails}
+                      onShare={onShare}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </MotionConfig>
       </div>
     </section>
   );
