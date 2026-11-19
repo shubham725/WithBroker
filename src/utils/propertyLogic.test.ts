@@ -27,7 +27,7 @@ import { PropertySubmissionInput } from '../types/property';
 test('getActiveListings excludes rented or inactive properties', () => {
   const active = getActiveListings(SAMPLE_PROPERTIES);
   assert.equal(active.some((p) => p.listingStatus !== 'active'), false);
-  assert.equal(active.length, 4);
+  assert.equal(active.length, 9);
 });
 
 test('filterProperties filters by locality, propertyType, and maxRent accurately', () => {
@@ -36,14 +36,14 @@ test('filterProperties filters by locality, propertyType, and maxRent accurately
     propertyType: 'all',
     maxRent: null,
   });
-  assert.equal(wadgaon.length, 3);
+  assert.equal(wadgaon.length, 6);
 
   const under15k = filterProperties(SAMPLE_PROPERTIES, {
     location: 'all',
     propertyType: 'all',
     maxRent: 15000,
   });
-  assert.equal(under15k.length, 2);
+  assert.equal(under15k.length, 3);
   assert.ok(under15k.every((p) => p.monthlyRent <= 15000));
 
   const nearby1rk = filterProperties(SAMPLE_PROPERTIES, {
@@ -51,8 +51,18 @@ test('filterProperties filters by locality, propertyType, and maxRent accurately
     propertyType: '1RK',
     maxRent: 10000,
   });
-  assert.equal(nearby1rk.length, 1);
-  assert.equal(nearby1rk[0].id, 'wb-flat-4');
+  assert.equal(nearby1rk.length, 2);
+  assert.deepEqual(
+    nearby1rk.map((p) => p.id),
+    ['wb-flat-4', 'wb-flat-7']
+  );
+
+  const twoBhk = filterProperties(SAMPLE_PROPERTIES, {
+    location: 'all',
+    propertyType: '2BHK',
+    maxRent: null,
+  });
+  assert.equal(twoBhk.length, 4);
 
   const furnished = filterProperties(SAMPLE_PROPERTIES, {
     location: 'all',
@@ -60,8 +70,11 @@ test('filterProperties filters by locality, propertyType, and maxRent accurately
     maxRent: null,
     furnishing: 'Fully Furnished',
   });
-  assert.equal(furnished.length, 1);
-  assert.equal(furnished[0].id, 'wb-flat-1');
+  assert.equal(furnished.length, 2);
+  assert.deepEqual(
+    furnished.map((p) => p.id),
+    ['wb-flat-1', 'wb-flat-7']
+  );
 
   const sortedAsc = filterProperties(SAMPLE_PROPERTIES, {
     location: 'all',
@@ -71,7 +84,7 @@ test('filterProperties filters by locality, propertyType, and maxRent accurately
   });
   assert.deepEqual(
     sortedAsc.map((p) => p.monthlyRent),
-    [9000, 12000, 15500, 21000]
+    [9000, 10000, 12000, 15500, 20000, 21000, 25000, 25000, 30000]
   );
 
   const sortedDesc = filterProperties(SAMPLE_PROPERTIES, {
@@ -82,18 +95,18 @@ test('filterProperties filters by locality, propertyType, and maxRent accurately
   });
   assert.deepEqual(
     sortedDesc.map((p) => p.monthlyRent),
-    [21000, 15500, 12000, 9000]
+    [30000, 25000, 25000, 21000, 20000, 15500, 12000, 10000, 9000]
   );
 
   const savedOnly = filterProperties(
     SAMPLE_PROPERTIES,
     { location: 'all', propertyType: 'all', maxRent: null, onlySaved: true },
     LOCALITIES,
-    ['wb-flat-2', 'wb-flat-4']
+    ['wb-flat-2', 'wb-flat-9']
   );
   assert.deepEqual(
     savedOnly.map((p) => p.id),
-    ['wb-flat-2', 'wb-flat-4']
+    ['wb-flat-2', 'wb-flat-9']
   );
 });
 
@@ -103,10 +116,10 @@ test('getLocalityListingCount calculates real active counts from property data',
     count: getLocalityListingCount(SAMPLE_PROPERTIES, loc),
   }));
   assert.deepEqual(counts, [
-    { slug: 'wadgaon-sheri', count: 3 },
+    { slug: 'wadgaon-sheri', count: 6 },
     { slug: 'viman-nagar', count: 0 },
     { slug: 'somnath-nagar', count: 0 },
-    { slug: 'other', count: 1 },
+    { slug: 'other', count: 3 },
   ]);
 });
 
