@@ -68,18 +68,29 @@ function WithBrokerAppContent() {
   const fetchPublicListings = useCallback(async () => {
     setLoadingListings(true);
     setLoadError(null);
-    try {
-      const res = await fetch('/api/properties');
-      if (!res.ok) {
-        throw new Error('Could not load available rental flats.');
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch('/api/properties', {
+          headers: { Accept: 'application/json' },
+        });
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok || !contentType.includes('application/json')) {
+          throw new Error('Could not load available rental flats.');
+        }
+        const data = await res.json();
+        setAllProperties(Array.isArray(data.properties) ? data.properties : []);
+        setLoadingListings(false);
+        return;
+      } catch (err: unknown) {
+        lastErr = err;
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
       }
-      const data = await res.json();
-      setAllProperties(Array.isArray(data.properties) ? data.properties : []);
-    } catch (err: unknown) {
-      setLoadError((err as Error)?.message || 'Unable to load rental flats right now.');
-    } finally {
-      setLoadingListings(false);
     }
+    setLoadError((lastErr as Error)?.message || 'Unable to load rental flats right now.');
+    setLoadingListings(false);
   }, []);
 
   useEffect(() => {

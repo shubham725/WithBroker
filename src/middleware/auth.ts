@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response } from 'express';
-import { DecodedIdToken } from 'firebase-admin/auth';
-import { DbUser } from '../db/schema.ts';
-import { getOrCreateUser } from '../db/users.ts';
+import type { NextFunction, Request, Response } from 'express';
+import type { DecodedIdToken } from 'firebase-admin/auth';
+import type { DbUser } from '../db/schema.ts';
+import { getOrCreateUser, isAuthorizedAdminEmail } from '../db/users.ts';
 import { adminAuth } from '../lib/firebase-admin.ts';
 
 export interface AuthRequest extends Request {
@@ -48,9 +48,15 @@ export const requireAdmin = async (
   next: NextFunction
 ) => {
   await requireAuth(req, res, () => {
-    if (!req.dbUser || req.dbUser.role !== 'admin') {
+    const emailVerified = req.user?.email_verified !== false;
+    const isSoleAdmin =
+      emailVerified &&
+      isAuthorizedAdminEmail(req.user?.email) &&
+      req.dbUser?.role === 'admin';
+
+    if (!isSoleAdmin) {
       return res.status(403).json({
-        error: 'Forbidden: Only authorized WithBroker administrators can access this dashboard.',
+        error: 'Forbidden: Admin access is restricted exclusively to the WithBroker owner account.',
       });
     }
     return next();

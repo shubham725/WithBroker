@@ -1,19 +1,11 @@
 import { db } from './index.ts';
 import { users } from './schema.ts';
 
-const DEFAULT_ADMIN_EMAILS = ['yogeshbkumbhar0.2@gmail.com'];
-
-export function getAuthorizedAdminEmails(): string[] {
-  const fromEnv = (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-  return Array.from(new Set([...DEFAULT_ADMIN_EMAILS, ...fromEnv]));
-}
+export const SOLE_ADMIN_EMAIL = 'yogeshbkumbhar0.2@gmail.com';
 
 export function isAuthorizedAdminEmail(email: string | undefined | null): boolean {
   if (!email) return false;
-  return getAuthorizedAdminEmails().includes(email.trim().toLowerCase());
+  return email.trim().toLowerCase() === SOLE_ADMIN_EMAIL;
 }
 
 export async function getOrCreateUser(

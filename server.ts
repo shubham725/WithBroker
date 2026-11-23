@@ -16,9 +16,9 @@ import {
   updatePropertyStatus,
   verifyPhotoPreviewToken,
 } from './src/db/propertiesRepo.ts';
-import { AuthRequest, requireAdmin } from './src/middleware/auth.ts';
+import { type AuthRequest, requireAdmin } from './src/middleware/auth.ts';
 import { adminAuth } from './src/lib/firebase-admin.ts';
-import { getOrCreateUser } from './src/db/users.ts';
+import { getOrCreateUser, isAuthorizedAdminEmail } from './src/db/users.ts';
 import type {
   FurnishingStatus,
   PropertyType,
@@ -299,7 +299,7 @@ async function startServer() {
           try {
             const token = req.headers.authorization.slice('Bearer '.length).trim();
             const decoded = await adminAuth.verifyIdToken(token);
-            if (decoded.email) {
+            if (decoded.email && decoded.email_verified !== false && isAuthorizedAdminEmail(decoded.email)) {
               const dbUser = await getOrCreateUser(decoded.uid, decoded.email, decoded.name ?? null);
               authorized = dbUser.role === 'admin';
             }
@@ -524,6 +524,10 @@ async function startServer() {
       console.error('POST /api/admin/notifications/mark-read failed:', error);
       res.status(500).json({ error: 'Failed to update notifications.' });
     }
+  });
+
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'API route not found.' });
   });
 
   // Frontend Vite / Static Assets Serving

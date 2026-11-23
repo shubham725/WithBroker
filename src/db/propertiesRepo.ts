@@ -2,8 +2,8 @@ import crypto from 'crypto';
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { db } from './index.ts';
 import {
-  DbAdminNotification,
-  DbProperty,
+  type DbAdminNotification,
+  type DbProperty,
   adminNotifications,
   properties,
   propertyPhotos,
@@ -188,18 +188,25 @@ function toNotification(row: DbAdminNotification): AdminNotification {
 }
 
 export async function listPublicProperties(): Promise<PropertyListing[]> {
-  try {
-    const rows = await db
-      .select()
-      .from(properties)
-      .where(inArray(properties.status, ['Available', 'Rented']))
-      .orderBy(desc(properties.approvedAt), desc(properties.submittedAt));
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const rows = await db
+        .select()
+        .from(properties)
+        .where(inArray(properties.status, ['Available', 'Rented']))
+        .orderBy(desc(properties.approvedAt), desc(properties.submittedAt));
 
-    return rows.map(toPublicProperty);
-  } catch (error) {
-    console.error('Database query failed in listPublicProperties:', error);
-    throw new Error('Unable to load property listings right now.', { cause: error });
+      return rows.map(toPublicProperty);
+    } catch (error) {
+      lastError = error;
+      console.error(`Database query failed in listPublicProperties (attempt ${attempt + 1}/3):`, error);
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)));
+      }
+    }
   }
+  throw new Error('Unable to load property listings right now.', { cause: lastError });
 }
 
 export async function listAdminProperties(): Promise<{
