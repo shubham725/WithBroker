@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import {
   ArrowUpDown,
   Bookmark,
+  CheckCircle2,
+  IndianRupee,
   LayoutGrid,
   Map as MapIcon,
   RotateCcw,
   Sofa,
+  Users,
 } from 'lucide-react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import {
@@ -15,8 +18,9 @@ import {
   PropertyType,
   SearchFiltersState,
   SortOrder,
+  SubmitterRole,
 } from '../types/property';
-import { buildGeneralWhatsAppUrl } from '../utils/propertyLogic';
+import { buildGeneralWhatsAppUrl, isPropertyRentedOut } from '../utils/propertyLogic';
 import { PropertyCard } from './PropertyCard';
 import { PuneListingsMap } from './PuneListingsMap';
 import { WhatsAppIcon } from './WhatsAppButton';
@@ -50,9 +54,33 @@ const FURNISHING_OPTIONS: Array<{ value: 'all' | FurnishingStatus; label: string
 ];
 
 const SORT_OPTIONS: Array<{ value: SortOrder; label: string }> = [
-  { value: 'featured', label: 'Sort: Featured' },
+  { value: 'recent', label: 'Recently Added' },
   { value: 'rent-asc', label: 'Rent: Low to High' },
   { value: 'rent-desc', label: 'Rent: High to Low' },
+];
+
+const MIN_RENT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Min Rent' },
+  { value: '5000', label: 'Min ₹5,000' },
+  { value: '10000', label: 'Min ₹10,000' },
+  { value: '15000', label: 'Min ₹15,000' },
+  { value: '20000', label: 'Min ₹20,000' },
+  { value: '25000', label: 'Min ₹25,000' },
+];
+
+const MAX_RENT_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Max Rent' },
+  { value: '10000', label: 'Max ₹10,000' },
+  { value: '15000', label: 'Max ₹15,000' },
+  { value: '22000', label: 'Max ₹22,000' },
+  { value: '25000', label: 'Max ₹25,000' },
+  { value: '35000', label: 'Max ₹35,000' },
+];
+
+const SOURCE_OPTIONS: Array<{ value: 'all' | SubmitterRole; label: string }> = [
+  { value: 'all', label: 'Owner & Broker' },
+  { value: 'Owner', label: 'Owner Only' },
+  { value: 'Broker', label: 'Broker Only' },
 ];
 
 export const PropertyGrid: React.FC<PropertyGridProps> = ({
@@ -70,15 +98,20 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
 
   const furnishingValue = filters.furnishing ?? 'all';
-  const sortValue = filters.sortBy ?? 'featured';
+  const submitterRoleValue = filters.submitterRole ?? 'all';
+  const sortValue = filters.sortBy ?? 'recent';
   const onlySavedValue = Boolean(filters.onlySaved);
+  const onlyAvailableValue = Boolean(filters.onlyAvailable);
 
   const hasActiveFilter =
     filters.location !== 'all' ||
     filters.propertyType !== 'all' ||
+    (filters.minRent !== undefined && filters.minRent !== null) ||
     filters.maxRent !== null ||
     furnishingValue !== 'all' ||
-    sortValue !== 'featured' ||
+    submitterRoleValue !== 'all' ||
+    onlyAvailableValue ||
+    sortValue !== 'recent' ||
     onlySavedValue;
 
   const activeSavedCount = allProperties.filter(
@@ -89,6 +122,9 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
     filters.location === 'all'
       ? null
       : localities.find((l) => l.slug === filters.location)?.name ?? filters.location;
+
+  const availableCount = properties.filter((p) => !isPropertyRentedOut(p)).length;
+  const rentedCount = properties.length - availableCount;
 
   return (
     <section id="flats" className="bg-[#F9F8FC] pt-2 pb-10 sm:pb-12">
@@ -142,8 +178,16 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
               data-testid="listings-count"
               className="font-semibold text-[#090A14] tabular-nums"
             >
-              {properties.length} {properties.length === 1 ? 'Flat' : 'Flats'} Available
+              {availableCount} {availableCount === 1 ? 'Flat' : 'Flats'} Available
             </span>
+            {rentedCount > 0 && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="font-medium text-[#DC2626] tabular-nums">
+                  {rentedCount} Rented Out
+                </span>
+              </>
+            )}
             {activeLocalityName && (
               <>
                 <span aria-hidden="true">·</span>
@@ -164,6 +208,60 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
 
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <div className="relative">
+              <label htmlFor="toolbar-min-rent" className="sr-only">
+                Minimum Rent
+              </label>
+              <IndianRupee
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B1CD4]"
+                aria-hidden="true"
+              />
+              <select
+                id="toolbar-min-rent"
+                value={filters.minRent ? String(filters.minRent) : ''}
+                onChange={(e) =>
+                  onFilterChange({
+                    ...filters,
+                    minRent: e.target.value ? Number(e.target.value) : null,
+                  })
+                }
+                className="h-9 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-8 pr-2 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+              >
+                {MIN_RENT_OPTIONS.map((opt) => (
+                  <option key={opt.label} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <label htmlFor="toolbar-max-rent" className="sr-only">
+                Maximum Rent
+              </label>
+              <IndianRupee
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#656275]"
+                aria-hidden="true"
+              />
+              <select
+                id="toolbar-max-rent"
+                value={filters.maxRent ? String(filters.maxRent) : ''}
+                onChange={(e) =>
+                  onFilterChange({
+                    ...filters,
+                    maxRent: e.target.value ? Number(e.target.value) : null,
+                  })
+                }
+                className="h-9 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-8 pr-2 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+              >
+                {MAX_RENT_OPTIONS.map((opt) => (
+                  <option key={opt.label} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
               <label htmlFor="toolbar-furnishing" className="sr-only">
                 Furnishing Status
               </label>
@@ -183,6 +281,33 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                 className="h-9 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-8 pr-2.5 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
               >
                 {FURNISHING_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <label htmlFor="toolbar-source" className="sr-only">
+                Owner or Broker Listing
+              </label>
+              <Users
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B1CD4]"
+                aria-hidden="true"
+              />
+              <select
+                id="toolbar-source"
+                value={submitterRoleValue}
+                onChange={(e) =>
+                  onFilterChange({
+                    ...filters,
+                    submitterRole: e.target.value as 'all' | SubmitterRole,
+                  })
+                }
+                className="h-9 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-8 pr-2.5 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+              >
+                {SOURCE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -216,6 +341,25 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                 ))}
               </select>
             </div>
+
+            <button
+              type="button"
+              aria-pressed={onlyAvailableValue}
+              onClick={() =>
+                onFilterChange({
+                  ...filters,
+                  onlyAvailable: !onlyAvailableValue,
+                })
+              }
+              className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-xs font-semibold transition-colors duration-150 ${
+                onlyAvailableValue
+                  ? 'border-[#16A34A] bg-[#16A34A] text-white'
+                  : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#16A34A] hover:text-[#16A34A]'
+              }`}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Available Only</span>
+            </button>
 
             <button
               type="button"

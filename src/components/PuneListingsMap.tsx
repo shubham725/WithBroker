@@ -13,7 +13,7 @@ import {
 } from '@vis.gl/react-google-maps';
 import { ExternalLink, MapPin } from 'lucide-react';
 import { PropertyListing } from '../types/property';
-import { formatINR } from '../utils/propertyLogic';
+import { formatINR, isPropertyRentedOut } from '../utils/propertyLogic';
 
 interface PuneListingsMapProps {
   properties: PropertyListing[];
@@ -67,13 +67,14 @@ const PropertyMarkerItem: React.FC<PropertyMarkerItemProps> = ({
   onSelect,
 }) => {
   const [markerRef, marker] = useAdvancedMarkerRef();
+  const isRentedOut = isPropertyRentedOut(property);
 
   return (
     <AdvancedMarker
       ref={markerRef}
       position={property.coordinates}
-      title={`${property.propertyType} · ${formatINR(property.monthlyRent)} · ${property.locality}`}
-      zIndex={isSelected ? 1000 : 10}
+      title={`${property.propertyType}${isRentedOut ? ' (Rented Out)' : ''} · ${formatINR(property.monthlyRent)} · ${property.locality}`}
+      zIndex={isSelected ? 1000 : isRentedOut ? 5 : 10}
       onClick={() => {
         if (marker) {
           onSelect(property, marker);
@@ -81,7 +82,7 @@ const PropertyMarkerItem: React.FC<PropertyMarkerItemProps> = ({
       }}
     >
       <Pin
-        background={isSelected ? '#090A14' : '#6B1CD4'}
+        background={isSelected ? '#090A14' : isRentedOut ? '#71717A' : '#6B1CD4'}
         borderColor="#FFFFFF"
         glyphColor="#FFFFFF"
         scale={isSelected ? 1.15 : 1.0}
@@ -165,7 +166,12 @@ const MapCanvas: React.FC<MapCanvasProps> = ({
           >
             <div className="p-1 text-[#24212D]">
               <p className="text-xs font-semibold text-[#6B1CD4]">
-                {selectedProperty.propertyType} · {selectedProperty.furnishing}
+                {selectedProperty.propertyType} ·{' '}
+                {isPropertyRentedOut(selectedProperty) ? (
+                  <span className="font-bold text-[#DC2626]">Rented Out</span>
+                ) : (
+                  selectedProperty.furnishing
+                )}
               </p>
               <p className="mt-0.5 text-sm font-bold text-[#090A14]">
                 {selectedProperty.title}
@@ -231,6 +237,9 @@ const MapDirectoryFallback: React.FC<MapDirectoryFallbackProps> = ({
                 <div className="min-w-0">
                   <p className="truncate text-xs font-semibold text-[#090A14]">
                     {prop.propertyType} · {prop.subLocality}
+                    {isPropertyRentedOut(prop) && (
+                      <span className="ml-1.5 font-bold text-[#DC2626]">(Rented Out)</span>
+                    )}
                   </p>
                   <p className="truncate text-xs text-[#6E6B7B]">
                     {formatINR(prop.monthlyRent)} / mo

@@ -26,6 +26,7 @@ import {
   formatDepositLabel,
   formatINR,
   getPropertyDirectUrl,
+  isPropertyRentedOut,
 } from '../utils/propertyLogic';
 import { PuneListingsMap } from './PuneListingsMap';
 import { SafeImage } from './SafeImage';
@@ -72,6 +73,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 
   const images = property.images.length > 0 ? property.images : [''];
   const currentImage = images[activeIndex] ?? images[0];
+  const isRentedOut = isPropertyRentedOut(property);
 
   const pageUrl =
     typeof window !== 'undefined'
@@ -102,6 +104,15 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
       ? [{ icon: Compass, label: 'Facing', value: property.facing }]
       : []),
     { icon: Bath, label: 'Bathroom', value: property.bathroomType },
+    ...(typeof property.balconies === 'number'
+      ? [
+          {
+            icon: Building2,
+            label: 'Balconies',
+            value: property.balconies === 0 ? 'None' : String(property.balconies),
+          },
+        ]
+      : []),
     { icon: Car, label: 'Parking', value: property.parking },
     { icon: Droplets, label: 'Water Supply', value: property.waterAvailability },
     { icon: Building2, label: 'Building / Lift', value: property.liftAvailability },
@@ -124,8 +135,18 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
         {/* Top Modal Header */}
         <div className="flex items-center justify-between gap-4 border-b border-[#090A14]/8 px-5 py-4 sm:px-6">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-[#6B1CD4]">
-              {property.propertyType} · {property.availabilityLabel} · {property.furnishing}
+            <p className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[#6B1CD4]">
+              <span className="rounded bg-[#F5EFFD] px-1.5 py-0.5 font-bold tabular-nums">
+                {property.propertyCode}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>{property.propertyType}</span>
+              <span aria-hidden="true">·</span>
+              <span className={isRentedOut ? 'font-bold text-[#DC2626]' : ''}>
+                {property.availabilityLabel}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>{property.furnishing}</span>
             </p>
             <h2
               id="property-details-title"
@@ -164,14 +185,39 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
 
         {/* Scrollable Body */}
         <div className="overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
+          {isRentedOut && (
+            <div
+              role="status"
+              data-testid="rented-out-banner"
+              className="mb-4 flex flex-col gap-1 rounded-xl border border-[#DC2626]/25 bg-[#FEF2F2] px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:text-sm"
+            >
+              <div className="flex items-center gap-2 font-semibold text-[#B91C1C]">
+                <span className="inline-flex rounded-md bg-[#DC2626] px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-white uppercase">
+                  Rented Out
+                </span>
+                <span>This flat has been rented out.</span>
+              </div>
+              <span className="text-xs text-[#7F1D1D]">
+                Contact WithBroker on WhatsApp for similar available flats in {property.subLocality}.
+              </span>
+            </div>
+          )}
+
           {/* Image Gallery */}
           <div className="relative aspect-[16/9] max-h-[240px] sm:max-h-[350px] w-full overflow-hidden rounded-2xl bg-[#F3F0FA]">
             <SafeImage
               src={currentImage}
               alt={`${property.title} photo ${activeIndex + 1}`}
               eager
-              className="h-full w-full object-cover"
+              className={`h-full w-full object-cover ${
+                isRentedOut ? 'grayscale-[30%] brightness-[0.85]' : ''
+              }`}
             />
+            {isRentedOut && (
+              <span className="pointer-events-none absolute top-3 left-3 rounded-lg border border-white/40 bg-[#DC2626] px-3 py-1 text-xs font-extrabold tracking-wider text-white uppercase shadow-md">
+                Rented Out
+              </span>
+            )}
             {images.length > 1 && (
               <>
                 <button
@@ -297,9 +343,21 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                   Transparent Rental Breakdown
                 </h3>
                 <dl className="mt-4 space-y-3 text-sm">
+                  {isRentedOut && (
+                    <div className="flex items-center justify-between border-b border-[#090A14]/8 pb-2.5">
+                      <dt className="text-[#656275]">Listing Status</dt>
+                      <dd className="rounded-md bg-[#FEF2F2] px-2.5 py-0.5 text-xs font-bold text-[#DC2626] ring-1 ring-[#DC2626]/20">
+                        Rented Out
+                      </dd>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between border-b border-[#090A14]/8 pb-2.5">
                     <dt className="text-[#656275]">Monthly Rent</dt>
-                    <dd className="font-display text-xl font-bold text-[#6B1CD4] tabular-nums">
+                    <dd
+                      className={`font-display text-xl font-bold tabular-nums ${
+                        isRentedOut ? 'text-[#767287] line-through' : 'text-[#6B1CD4]'
+                      }`}
+                    >
                       {formatINR(property.monthlyRent)}
                     </dd>
                   </div>
@@ -328,20 +386,26 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                     href={whatsAppUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#6B1CD4] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#5412AD]"
+                    className={`inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 ${
+                      isRentedOut
+                        ? 'bg-[#16A34A] hover:bg-[#15803D]'
+                        : 'bg-[#6B1CD4] hover:bg-[#5412AD]'
+                    }`}
                   >
                     <WhatsAppIcon className="h-4 w-4 text-white" />
-                    <span>Contact on WhatsApp</span>
+                    <span>{isRentedOut ? 'Ask for Similar Flats' : 'Contact on WhatsApp'}</span>
                   </a>
 
-                  <button
-                    type="button"
-                    onClick={() => onShare(property)}
-                    className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[#090A14]/15 bg-white px-4 py-2.5 text-sm font-semibold text-[#090A14] transition-colors duration-150 hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
-                  >
-                    <Share2 className="h-4 w-4" aria-hidden="true" />
-                    <span>Share Property Post</span>
-                  </button>
+                  {!isRentedOut && (
+                    <button
+                      type="button"
+                      onClick={() => onShare(property)}
+                      className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[#090A14]/15 bg-white px-4 py-2.5 text-sm font-semibold text-[#090A14] transition-colors duration-150 hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                    >
+                      <Share2 className="h-4 w-4" aria-hidden="true" />
+                      <span>Share Property Post</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

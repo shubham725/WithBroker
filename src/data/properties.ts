@@ -58,6 +58,8 @@ export const LOCALITIES: LocalityConfig[] = [
 export const SAMPLE_PROPERTIES: PropertyListing[] = [
   {
     id: 'wb-flat-1',
+    propertyCode: 'WB-1001',
+    submitterRole: 'Broker',
     title: '1BHK Furnished Flat Near Phoenix Mall',
     propertyType: '1BHK',
     locality: 'Near Phoenix Mall, Wadgaon Sheri, Pune',
@@ -112,6 +114,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
   },
   {
     id: 'wb-flat-2',
+    propertyCode: 'WB-1002',
+    submitterRole: 'Broker',
     title: '1BHK Flat Near Wadgaon Sheri Post Office',
     propertyType: '1BHK',
     locality: 'Near Wadgaon Sheri Post Office, Pune',
@@ -159,6 +163,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
   },
   {
     id: 'wb-flat-3',
+    propertyCode: 'WB-1003',
+    submitterRole: 'Owner',
     title: 'Semi-Furnished 1BHK Flat (480 Sq. Ft.)',
     propertyType: '1BHK',
     locality: 'Wadgaon Sheri, Pune',
@@ -208,6 +214,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
   },
   {
     id: 'wb-flat-4',
+    propertyCode: 'WB-1004',
+    submitterRole: 'Owner',
     title: '1RK Room in Ganesh Nagar Near Oxygen Park',
     propertyType: '1RK',
     locality: 'Ganesh Nagar, Near Oxygen Park, Wadgaon Sheri, Pune',
@@ -230,8 +238,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
     waterAvailability: '24 Hours Water',
     liftAvailability: '1st Floor',
     suitableFor: 'Bachelors',
-    availableFrom: 'Immediate',
-    availabilityLabel: 'Available',
+    availableFrom: 'Rented Out',
+    availabilityLabel: 'Rented Out',
     listingStatus: 'active',
     isDemoListing: false,
     shortDescription:
@@ -258,6 +266,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
   },
   {
     id: 'wb-flat-5',
+    propertyCode: 'WB-1005',
+    submitterRole: 'Broker',
     title: '2BHK Unfurnished Flat in Shivanand Garden',
     propertyType: '2BHK',
     locality: 'Shivanand Garden, Wanawadi Rd, Wanowrie, Pune',
@@ -302,6 +312,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
   },
   {
     id: 'wb-flat-6',
+    propertyCode: 'WB-1006',
+    submitterRole: 'Broker',
     title: '2BHK Semi-Furnished Flat in Mate Nagar',
     propertyType: '2BHK',
     locality: 'Mate Nagar, Wadgaon Sheri, Pune',
@@ -357,6 +369,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
   },
   {
     id: 'wb-flat-7',
+    propertyCode: 'WB-1007',
+    submitterRole: 'Broker',
     title: 'Furnished 1RK Room in Keshav Nagar',
     propertyType: '1RK',
     locality: 'Keshav Nagar, Mundhwa, Pune',
@@ -401,6 +415,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
   },
   {
     id: 'wb-flat-8',
+    propertyCode: 'WB-1008',
+    submitterRole: 'Broker',
     title: '2BHK Flat for Rent in Wadgaon Sheri',
     propertyType: '2BHK',
     locality: 'Wadgaon Sheri, Pune',
@@ -448,6 +464,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
   },
   {
     id: 'wb-flat-9',
+    propertyCode: 'WB-1009',
+    submitterRole: 'Owner',
     title: 'Brand-New 2BHK at Arihant Niwara (B-201)',
     propertyType: '2BHK',
     locality: 'Arihant Niwara, Near City Care Hospital, Wadgaon Sheri, Pune',
@@ -498,6 +516,8 @@ export const SAMPLE_PROPERTIES: PropertyListing[] = [
   },
   {
     id: 'wb-archived-107',
+    propertyCode: 'WB-1099',
+    submitterRole: 'Owner',
     title: 'Archived 1RK Listing (Not Active)',
     propertyType: '1RK',
     locality: 'Somnath Nagar, Wadgaon Sheri',

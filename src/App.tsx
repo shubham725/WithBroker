@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Loader2, RefreshCw } from 'lucide-react';
+import { AdminDashboard } from './components/AdminDashboard';
 import { BottomSections } from './components/BottomSections';
 import { ContactModal } from './components/ContactModal';
 import { ExploreAreasSection } from './components/ExploreAreasSection';
@@ -10,22 +12,41 @@ import { PropertyDetails } from './components/PropertyDetails';
 import { PropertyGrid } from './components/PropertyGrid';
 import { SharePropertyModal } from './components/SharePropertyModal';
 import { FloatingWhatsAppButton } from './components/WhatsAppButton';
-import { LOCALITIES, SAMPLE_PROPERTIES } from './data/properties';
+import { AuthProvider } from './contexts/AuthContext';
+import { LOCALITIES } from './data/properties';
 import { PropertyListing, SearchFiltersState } from './types/property';
-import { filterProperties, getActiveListings } from './utils/propertyLogic';
+import { filterProperties } from './utils/propertyLogic';
 
 const INITIAL_FILTERS: SearchFiltersState = {
   location: 'all',
   propertyType: 'all',
+  minRent: null,
   maxRent: null,
   furnishing: 'all',
-  sortBy: 'featured',
+  submitterRole: 'all',
+  onlyAvailable: false,
+  sortBy: 'recent',
   onlySaved: false,
 };
 
 const SAVED_STORAGE_KEY = 'withbroker-saved-flats';
 
-export default function App() {
+function isAdminHash(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.location.hash === '#admin' ||
+    window.location.pathname === '/admin'
+  );
+}
+
+function WithBrokerAppContent() {
+  const [view, setView] = useState<'public' | 'admin'>(() =>
+    isAdminHash() ? 'admin' : 'public'
+  );
+  const [allProperties, setAllProperties] = useState<PropertyListing[]>([]);
+  const [loadingListings, setLoadingListings] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [filters, setFilters] = useState<SearchFiltersState>(INITIAL_FILTERS);
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
   const [shareProperty, setShareProperty] = useState<PropertyListing | null>(null);
@@ -44,6 +65,40 @@ export default function App() {
     }
   });
 
+  const fetchPublicListings = useCallback(async () => {
+    setLoadingListings(true);
+    setLoadError(null);
+    try {
+      const res = await fetch('/api/properties');
+      if (!res.ok) {
+        throw new Error('Could not load available rental flats.');
+      }
+      const data = await res.json();
+      setAllProperties(Array.isArray(data.properties) ? data.properties : []);
+    } catch (err: unknown) {
+      setLoadError((err as Error)?.message || 'Unable to load rental flats right now.');
+    } finally {
+      setLoadingListings(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchPublicListings();
+  }, [fetchPublicListings]);
+
+  // Sync SPA admin route with hash/popstate
+  useEffect(() => {
+    const syncRoute = () => {
+      setView(isAdminHash() ? 'admin' : 'public');
+    };
+    window.addEventListener('hashchange', syncRoute);
+    window.addEventListener('popstate', syncRoute);
+    return () => {
+      window.removeEventListener('hashchange', syncRoute);
+      window.removeEventListener('popstate', syncRoute);
+    };
+  }, []);
+
   // Listen for Google Maps Platform demo key quota events
   useEffect(() => {
     const handleQuota = () => setMapsQuotaExceeded(true);
@@ -61,22 +116,24 @@ export default function App() {
     }
   }, [savedIds]);
 
-  // Support deep links like ?flat=wb-flat-1
+  // Support deep links like ?flat=WB-1001
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || allProperties.length === 0) return;
     const params = new URLSearchParams(window.location.search);
     const flatId = params.get('flat');
     if (flatId) {
-      const found = getActiveListings(SAMPLE_PROPERTIES).find((p) => p.id === flatId);
+      const found = allProperties.find(
+        (p) => p.id === flatId || p.propertyCode === flatId
+      );
       if (found) {
         setSelectedProperty(found);
       }
     }
-  }, []);
+  }, [allProperties]);
 
   const filteredListings = useMemo(
-    () => filterProperties(SAMPLE_PROPERTIES, filters, LOCALITIES, savedIds),
-    [filters, savedIds]
+    () => filterProperties(allProperties, filters, LOCALITIES, savedIds),
+    [allProperties, filters, savedIds]
   );
 
   const handleToggleSave = (propertyId: string) => {
@@ -105,6 +162,32 @@ export default function App() {
     }
   };
 
+  const openAdminDashboard = () => {
+    setView('admin');
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', '#admin');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  };
+
+  const openPublicWebsite = () => {
+    setView('public');
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', '/');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+    void fetchPublicListings();
+  };
+
+  if (view === 'admin') {
+    return (
+      <AdminDashboard
+        onBackToWebsite={openPublicWebsite}
+        onDataChanged={() => void fetchPublicListings()}
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-[#F9F8FC] text-[#090A14]">
       {mapsQuotaExceeded && (
@@ -130,6 +213,7 @@ export default function App() {
       <Navbar
         onOpenPostModal={() => setPostModalOpen(true)}
         onOpenContactModal={() => setContactModalOpen(true)}
+        onOpenAdmin={openAdminDashboard}
         onResetHome={handleResetHome}
       />
 
@@ -141,24 +225,54 @@ export default function App() {
         />
 
         <ExploreAreasSection
-          allProperties={SAMPLE_PROPERTIES}
+          allProperties={allProperties}
           localities={LOCALITIES}
           selectedLocation={filters.location}
           onSelectLocation={handleSelectArea}
         />
 
-        <PropertyGrid
-          allProperties={SAMPLE_PROPERTIES}
-          properties={filteredListings}
-          localities={LOCALITIES}
-          filters={filters}
-          savedIds={savedIds}
-          onToggleSave={handleToggleSave}
-          onFilterChange={setFilters}
-          onResetFilters={() => setFilters(INITIAL_FILTERS)}
-          onViewDetails={(property) => setSelectedProperty(property)}
-          onShare={(property) => setShareProperty(property)}
-        />
+        {loadError ? (
+          <section id="flats" className="bg-[#F9F8FC] py-12">
+            <div className="mx-auto max-w-2xl px-4 text-center">
+              <div className="rounded-2xl border border-red-200 bg-white p-8 shadow-xs">
+                <h2 className="font-display text-lg font-bold text-[#090A14]">
+                  Unable to Load Rental Flats
+                </h2>
+                <p className="mt-1.5 text-sm text-[#656275]">{loadError}</p>
+                <button
+                  type="button"
+                  onClick={() => void fetchPublicListings()}
+                  className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[#6B1CD4] px-5 text-sm font-semibold text-white hover:bg-[#5412AD]"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span>Try Again</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : loadingListings && allProperties.length === 0 ? (
+          <section id="flats" className="bg-[#F9F8FC] py-14">
+            <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-3 px-4 text-center">
+              <Loader2 className="h-7 w-7 animate-spin text-[#6B1CD4]" />
+              <p className="text-sm font-medium text-[#656275]">
+                Loading verified Pune rental listings...
+              </p>
+            </div>
+          </section>
+        ) : (
+          <PropertyGrid
+            allProperties={allProperties}
+            properties={filteredListings}
+            localities={LOCALITIES}
+            filters={filters}
+            savedIds={savedIds}
+            onToggleSave={handleToggleSave}
+            onFilterChange={setFilters}
+            onResetFilters={() => setFilters(INITIAL_FILTERS)}
+            onViewDetails={(property) => setSelectedProperty(property)}
+            onShare={(property) => setShareProperty(property)}
+          />
+        )}
 
         <BottomSections onOpenPostModal={() => setPostModalOpen(true)} />
       </main>
@@ -167,6 +281,7 @@ export default function App() {
         onResetHome={handleResetHome}
         onOpenPostModal={() => setPostModalOpen(true)}
         onOpenContactModal={() => setContactModalOpen(true)}
+        onOpenAdmin={openAdminDashboard}
       />
 
       <FloatingWhatsAppButton />
@@ -195,5 +310,13 @@ export default function App() {
         onOpenPostModal={() => setPostModalOpen(true)}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <WithBrokerAppContent />
+    </AuthProvider>
   );
 }

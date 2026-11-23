@@ -11,12 +11,14 @@ interface FooterProps {
   onResetHome: () => void;
   onOpenPostModal: () => void;
   onOpenContactModal: () => void;
+  onOpenAdmin: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onResetHome,
   onOpenPostModal,
   onOpenContactModal,
+  onOpenAdmin,
 }) => {
   const scrollToSection = (sectionId: string) => {
     if (typeof document === 'undefined') return;
@@ -108,6 +110,15 @@ export const Footer: React.FC<FooterProps> = ({
                   className="text-left transition-colors hover:text-white"
                 >
                   About Us &amp; Contact
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={onOpenAdmin}
+                  className="text-left text-white/60 transition-colors hover:text-white"
+                >
+                  Admin Dashboard
                 </button>
               </li>
             </ul>

@@ -18,6 +18,7 @@ import {
   formatDepositLabel,
   formatINR,
   getPropertyDirectUrl,
+  isPropertyRentedOut,
 } from '../utils/propertyLogic';
 import { SafeImage } from './SafeImage';
 import { WhatsAppIcon } from './WhatsAppButton';
@@ -69,10 +70,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     ...property.facilities,
   ].slice(0, 3);
 
+  const isRentedOut = isPropertyRentedOut(property);
+
   return (
     <article
       data-testid={`property-card-${property.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#090A14]/8 bg-white shadow-[0_8px_24px_-14px_rgba(9,10,20,0.12)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#6B1CD4]/35 hover:shadow-[0_20px_44px_-16px_rgba(95,24,200,0.18)]"
+      data-rented={isRentedOut ? 'true' : 'false'}
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl border transition-all duration-200 ${
+        isRentedOut
+          ? 'border-[#090A14]/10 bg-[#FCFBFE] shadow-[0_6px_18px_-12px_rgba(9,10,20,0.1)] hover:border-[#DC2626]/35'
+          : 'border-[#090A14]/8 bg-white shadow-[0_8px_24px_-14px_rgba(9,10,20,0.12)] hover:-translate-y-0.5 hover:border-[#6B1CD4]/35 hover:shadow-[0_20px_44px_-16px_rgba(95,24,200,0.18)]'
+      }`}
     >
       {/* Top Property Image Frame */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#F3F0FA]">
@@ -85,12 +93,29 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <SafeImage
             src={currentImg}
             alt={`${property.title} in ${property.locality}`}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className={`h-full w-full object-cover transition-transform duration-300 ${
+              isRentedOut
+                ? 'grayscale-[35%] brightness-[0.8] group-hover:scale-[1.02]'
+                : 'group-hover:scale-[1.03]'
+            }`}
           />
         </button>
 
+        {/* Rented Out Stamp Overlay */}
+        {isRentedOut && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[#090A14]/25">
+            <span className="rounded-lg border border-white/40 bg-[#DC2626] px-4 py-1.5 text-xs font-extrabold tracking-widest text-white uppercase shadow-lg">
+              Rented Out
+            </span>
+          </div>
+        )}
+
         {/* Top-Left Property Type Tag */}
-        <span className="pointer-events-none absolute top-3 left-3 rounded-lg bg-[#6B1CD4] px-2.5 py-1 text-xs font-bold text-white shadow-xs">
+        <span
+          className={`pointer-events-none absolute top-3 left-3 rounded-lg px-2.5 py-1 text-xs font-bold text-white shadow-xs ${
+            isRentedOut ? 'bg-[#3F3D4D]' : 'bg-[#6B1CD4]'
+          }`}
+        >
           {property.propertyType}
         </span>
 
@@ -129,6 +154,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </>
         )}
 
+        {/* Bottom-Left Property ID Tag */}
+        <span className="pointer-events-none absolute left-3 bottom-3 rounded-md bg-[#140A29]/80 px-2 py-0.5 text-[11px] font-bold tracking-wide text-white tabular-nums">
+          {property.propertyCode}
+        </span>
+
         {/* Bottom-Right Photo Count Pill */}
         <span className="pointer-events-none absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-md bg-[#090A14]/75 px-2 py-0.5 text-[11px] font-semibold text-white tabular-nums">
           <Camera className="h-3 w-3" aria-hidden="true" />
@@ -156,11 +186,20 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </p>
 
         {/* Monthly Rent Line */}
-        <div className="mt-3 flex items-baseline gap-1.5">
-          <span className="font-display text-2xl font-bold text-[#6B1CD4] tabular-nums">
+        <div className="mt-3 flex flex-wrap items-baseline gap-2">
+          <span
+            className={`font-display text-2xl font-bold tabular-nums ${
+              isRentedOut ? 'text-[#767287] line-through' : 'text-[#6B1CD4]'
+            }`}
+          >
             {formatINR(property.monthlyRent)}
           </span>
           <span className="text-xs font-medium text-[#656275]">/month</span>
+          {isRentedOut && (
+            <span className="ml-auto rounded-md bg-[#FEF2F2] px-2 py-0.5 text-[11px] font-bold text-[#DC2626] ring-1 ring-[#DC2626]/20">
+              Rented Out
+            </span>
+          )}
         </div>
 
         {/* 3-Column Specs Strip: Deposit, Brokerage, Furnishing */}
@@ -218,28 +257,43 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <span>View {images.length} photos &amp; full details →</span>
         </button>
 
-        {/* Bottom 2-Button Action Row Matching Mockup */}
+        {/* Bottom Action Row */}
         <div className="mt-auto flex items-center gap-2.5 pt-3.5">
-          <button
-            type="button"
-            onClick={() => onShare(property)}
-            aria-label={`Share ${property.title} as text post`}
-            className="inline-flex min-h-[42px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#090A14]/12 bg-[#F8F7FC] px-4 py-2 text-xs sm:text-sm font-semibold text-[#090A14] transition-colors duration-150 hover:border-[#6B1CD4] hover:text-[#6B1CD4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
-          >
-            <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Share</span>
-          </button>
+          {isRentedOut ? (
+            <a
+              href={whatsAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Ask WithBroker on WhatsApp for flats similar to ${property.title}`}
+              className="inline-flex min-h-[42px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#090A14]/15 bg-[#F8F7FC] px-4 py-2 text-xs sm:text-sm font-semibold text-[#090A14] transition-colors duration-150 hover:border-[#16A34A] hover:bg-[#F0FDF4] hover:text-[#15803D] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16A34A]"
+            >
+              <WhatsAppIcon className="h-4 w-4 text-[#16A34A]" />
+              <span>Ask for Similar Flats</span>
+            </a>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onShare(property)}
+                aria-label={`Share ${property.title} as text post`}
+                className="inline-flex min-h-[42px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#090A14]/12 bg-[#F8F7FC] px-4 py-2 text-xs sm:text-sm font-semibold text-[#090A14] transition-colors duration-150 hover:border-[#6B1CD4] hover:text-[#6B1CD4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
+              >
+                <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Share</span>
+              </button>
 
-          <a
-            href={whatsAppUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Contact WithBroker on WhatsApp about ${property.title}`}
-            className="inline-flex min-h-[42px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[#16A34A] px-4 py-2 text-xs sm:text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#15803D] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16A34A]"
-          >
-            <WhatsAppIcon className="h-4 w-4 text-white" />
-            <span>Contact on WhatsApp</span>
-          </a>
+              <a
+                href={whatsAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Contact WithBroker on WhatsApp about ${property.title}`}
+                className="inline-flex min-h-[42px] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[#16A34A] px-4 py-2 text-xs sm:text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#15803D] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16A34A]"
+              >
+                <WhatsAppIcon className="h-4 w-4 text-white" />
+                <span>Contact on WhatsApp</span>
+              </a>
+            </>
+          )}
         </div>
       </div>
     </article>

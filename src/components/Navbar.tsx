@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, ShieldCheck, X } from 'lucide-react';
 import { WHATSAPP_NUMBER_DISPLAY, WITHBROKER_LOGO_URL } from '../data/properties';
 import { buildGeneralWhatsAppUrl } from '../utils/propertyLogic';
 import { WhatsAppIcon } from './WhatsAppButton';
@@ -7,12 +7,14 @@ import { WhatsAppIcon } from './WhatsAppButton';
 interface NavbarProps {
   onOpenPostModal: () => void;
   onOpenContactModal: () => void;
+  onOpenAdmin: () => void;
   onResetHome: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenPostModal,
   onOpenContactModal,
+  onOpenAdmin,
   onResetHome,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -105,8 +107,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </a>
         </nav>
 
-        {/* Right: WhatsApp CTA + Mobile Menu */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Right: Admin Link + WhatsApp CTA + Mobile Menu */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <button
+            type="button"
+            data-testid="navbar-admin-btn"
+            onClick={() => handleAction(onOpenAdmin)}
+            aria-label="Open WithBroker Admin Dashboard"
+            className="hidden sm:inline-flex h-10 items-center gap-1.5 rounded-full border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-xs font-semibold text-[#524F61] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+          >
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Admin</span>
+          </button>
+
           <a
             href={buildGeneralWhatsAppUrl()}
             target="_blank"
@@ -180,6 +193,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex min-h-[44px] w-full items-center rounded-xl border border-[#090A14]/10 bg-[#F9F8FC] px-3.5 text-left text-[#6B1CD4]"
             >
               Contact &amp; WhatsApp Group
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAction(onOpenAdmin)}
+              className="flex min-h-[44px] w-full items-center gap-2 rounded-xl border border-[#090A14]/10 bg-white px-3.5 text-left text-[#524F61]"
+            >
+              <ShieldCheck className="h-4 w-4 text-[#6B1CD4]" aria-hidden="true" />
+              <span>Admin Dashboard</span>
             </button>
           </div>
         </div>
