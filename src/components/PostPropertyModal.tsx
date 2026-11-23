@@ -234,6 +234,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
       formData.append('carpetArea', normalizedInput.carpetArea.trim());
       formData.append('description', normalizedInput.description.trim());
       formData.append('facilities', JSON.stringify(normalizedInput.facilities));
+      formData.append('website', '');
 
       for (const item of selectedPhotos) {
         formData.append('photos', item.file);
@@ -292,12 +293,12 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
         {/* Modal Header */}
         <div className="flex items-center justify-between gap-4 border-b border-[#090A14]/8 px-5 py-4 sm:px-6">
           <div>
-            <p className="text-xs font-semibold text-[#6B1CD4]">Owners &amp; Local Brokers</p>
+            <p className="text-xs font-semibold text-[#6B1CD4]">Free Public Submission · Owners &amp; Brokers</p>
             <h2
               id="post-property-modal-title"
               className="font-display text-lg font-bold text-[#090A14] sm:text-xl"
             >
-              List Your Rental Property on WithBroker
+              Add Your Property Free on WithBroker
             </h2>
           </div>
 
@@ -328,7 +329,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-display text-lg font-bold text-[#090A14]">
-                      Property Submitted for Approval!
+                      Property Submitted Successfully
                     </h3>
                     <span
                       data-testid="submitted-property-code"
@@ -336,14 +337,19 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     >
                       Property ID: {successInfo.propertyCode}
                     </span>
+                    <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-600/20">
+                      Status: PENDING
+                    </span>
                   </div>
 
-                  <p className="mt-2 text-sm leading-relaxed text-[#524F61]">
-                    Thank you, <span className="font-semibold text-[#090A14]">{successInfo.submitterName}</span>.
-                    Your property details{successInfo.photoCount > 0 ? ` and ${successInfo.photoCount} uploaded photo${successInfo.photoCount === 1 ? '' : 's'}` : ''} have been saved securely with status{' '}
-                    <span className="font-semibold text-amber-700">Pending Approval</span>.
-                    Once verified by our WithBroker admin team, it will automatically go live on the website.
+                  <p className="mt-2.5 text-sm leading-relaxed text-[#524F61]">
+                    Thank you! Your property has been submitted successfully. Our WithBroker admin will review your listing. Once approved, it will be visible on our website.
                   </p>
+                  {successInfo.photoCount > 0 && (
+                    <p className="mt-1.5 text-xs font-medium text-[#656275]">
+                      Saved {successInfo.photoCount} property photo{successInfo.photoCount === 1 ? '' : 's'} securely for admin review.
+                    </p>
+                  )}
 
                   <div className="mt-5 flex flex-wrap items-center gap-3">
                     <a

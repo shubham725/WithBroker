@@ -87,6 +87,24 @@ function isValidIndianPhone(raw: string): boolean {
   return /^[6-9]\d{9}$/.test(normalized);
 }
 
+const SUBMISSION_WINDOW_MS = 15 * 60 * 1000;
+const MAX_SUBMISSIONS_PER_WINDOW = 8;
+const submissionAttemptsByIp = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const recent = (submissionAttemptsByIp.get(ip) ?? []).filter(
+    (ts) => now - ts < SUBMISSION_WINDOW_MS
+  );
+  if (recent.length >= MAX_SUBMISSIONS_PER_WINDOW) {
+    submissionAttemptsByIp.set(ip, recent);
+    return true;
+  }
+  recent.push(now);
+  submissionAttemptsByIp.set(ip, recent);
+  return false;
+}
+
 async function startServer() {
   const app = express();
   app.set('trust proxy', 1);
@@ -105,6 +123,14 @@ async function startServer() {
 
   // Public API: Submit a new rental property (saved as Pending with uploaded photos)
   app.post('/api/submissions', (req, res, next) => {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (isRateLimited(clientIp)) {
+      res.status(429).json({
+        error: 'Too many submissions from your connection. Please wait a few minutes before submitting again.',
+      });
+      return;
+    }
+
     upload.array('photos', 8)(req, res, (err) => {
       if (err) {
         const message =
@@ -123,6 +149,9 @@ async function startServer() {
   }, async (req, res) => {
     try {
       const body = req.body ?? {};
+      if (typeof body.website === 'string' && body.website.trim().length > 0) {
+        return res.status(400).json({ error: 'Invalid submission request.' });
+      }
       const submitterName = String(body.name ?? '').trim();
       const submitterMobile = String(body.mobile ?? '').trim();
       const submitterWhatsapp = String(body.whatsapp ?? submitterMobile).trim();

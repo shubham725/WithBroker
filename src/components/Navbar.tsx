@@ -91,9 +91,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => handleAction(onOpenPostModal)}
-            className="whitespace-nowrap shrink-0 py-1.5 transition-colors hover:text-[#6B1CD4]"
+            className="whitespace-nowrap shrink-0 rounded-lg border border-[#6B1CD4]/25 bg-[#FAF7FF] px-3 py-1.5 font-semibold text-[#6B1CD4] transition-colors hover:bg-[#6B1CD4] hover:text-white"
           >
-            List Your Property
+            Add Your Property Free
           </button>
           <a
             href="#about"
@@ -176,9 +176,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={() => handleAction(onOpenPostModal)}
-              className="flex min-h-[44px] w-full items-center rounded-xl px-3.5 text-left hover:bg-[#F9F8FC]"
+              className="flex min-h-[44px] w-full items-center rounded-xl bg-[#6B1CD4] px-3.5 text-left font-bold text-white"
             >
-              List Your Property
+              ADD YOUR PROPERTY FREE
             </button>
             <button
               type="button"

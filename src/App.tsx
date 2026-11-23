@@ -233,6 +233,7 @@ function WithBrokerAppContent() {
           filters={filters}
           onFilterChange={setFilters}
           onSearchSubmit={scrollToFlats}
+          onOpenPostModal={() => setPostModalOpen(true)}
         />
 
         <ExploreAreasSection

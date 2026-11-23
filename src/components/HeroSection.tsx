@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   IndianRupee,
   MapPin,
+  PlusCircle,
   Search,
   Users,
   Zap,
@@ -14,6 +15,7 @@ interface HeroSectionProps {
   filters: SearchFiltersState;
   onFilterChange: (next: SearchFiltersState) => void;
   onSearchSubmit: () => void;
+  onOpenPostModal: () => void;
 }
 
 const HERO_IMAGE_URL = '/src/assets/images/hero_pune_apartments_1794817950867.jpg';
@@ -47,6 +49,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   filters,
   onFilterChange,
   onSearchSubmit,
+  onOpenPostModal,
 }) => {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,6 +152,22 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               </span>
               <span>Local Experts</span>
             </div>
+          </div>
+
+          {/* Prominent Public Property Submission CTA */}
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              data-testid="hero-add-property-btn"
+              onClick={onOpenPostModal}
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-5 py-2.5 text-xs sm:text-sm font-bold tracking-wide text-white shadow-[0_12px_28px_-10px_rgba(107,28,212,0.55)] transition-all duration-150 hover:from-[#6B1CD4] hover:to-[#4E11A8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
+            >
+              <PlusCircle className="h-4 w-4" aria-hidden="true" />
+              <span>ADD YOUR PROPERTY FREE</span>
+            </button>
+            <span className="text-xs font-medium text-[#524F61]">
+              For Owners &amp; Brokers · No login required
+            </span>
           </div>
         </div>
 

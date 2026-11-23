@@ -49,7 +49,7 @@ interface AdminDashboardProps {
   onDataChanged: () => void;
 }
 
-type AdminTab = 'all' | 'Pending' | 'Approved' | 'Rejected' | 'Rented';
+type AdminTab = 'all' | 'Pending' | 'Approved' | 'Rejected' | 'Available' | 'Rented';
 
 const STATUS_BADGE_MAP: Record<WorkflowStatus, string> = {
   Pending: 'bg-amber-50 text-amber-800 ring-1 ring-amber-600/25',
@@ -288,8 +288,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const q = searchQuery.trim().toLowerCase();
     return properties.filter((item) => {
       if (activeTab === 'Pending' && item.workflowStatus !== 'Pending') return false;
-      if (activeTab === 'Approved' && item.workflowStatus !== 'Available') return false;
+      if (
+        activeTab === 'Approved' &&
+        item.workflowStatus !== 'Available' &&
+        item.workflowStatus !== 'Rented'
+      ) {
+        return false;
+      }
       if (activeTab === 'Rejected' && item.workflowStatus !== 'Rejected') return false;
+      if (activeTab === 'Available' && item.workflowStatus !== 'Available') return false;
       if (activeTab === 'Rented' && item.workflowStatus !== 'Rented') return false;
 
       if (!q) return true;
@@ -334,10 +341,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <h1 className="mt-6 font-display text-2xl font-bold text-[#090A14]">
-            Admin Dashboard Sign In
+            Private Owner Admin Sign In
           </h1>
           <p className="mt-2 text-sm text-[#656275]">
-            Sign in with your authorized WithBroker Google account to approve submissions, manage listings, and update availability.
+            Restricted exclusively to the single WithBroker owner account. Public users, owners, and brokers can submit properties free from the main website without an admin account.
           </p>
 
           {authError && (
@@ -424,11 +431,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   ];
 
   const tabs: Array<{ key: AdminTab; label: string; count: number }> = [
-    { key: 'all', label: 'All Properties', count: stats.total },
+    { key: 'all', label: 'All Submissions', count: stats.total },
     { key: 'Pending', label: 'Pending Approval', count: stats.pending },
-    { key: 'Approved', label: 'Approved', count: stats.available },
-    { key: 'Rejected', label: 'Rejected', count: stats.rejected },
-    { key: 'Rented', label: 'Rented', count: stats.rented },
+    { key: 'Approved', label: 'Approved Properties', count: stats.approved },
+    { key: 'Rejected', label: 'Rejected Properties', count: stats.rejected },
+    { key: 'Available', label: 'Available Properties', count: stats.available },
+    { key: 'Rented', label: 'Rented Properties', count: stats.rented },
   ];
 
   return (

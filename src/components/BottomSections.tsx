@@ -45,10 +45,10 @@ export const BottomSections: React.FC<BottomSectionsProps> = ({ onOpenPostModal 
             <button
               type="button"
               onClick={onOpenPostModal}
-              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:from-[#6B1CD4] hover:to-[#4E11A8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
+              className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-6 py-2.5 text-xs sm:text-sm font-bold tracking-wide text-white shadow-sm transition-all duration-150 hover:from-[#6B1CD4] hover:to-[#4E11A8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              <span>List Your Property</span>
+              <span>ADD YOUR PROPERTY FREE</span>
             </button>
           </div>
         </section>
