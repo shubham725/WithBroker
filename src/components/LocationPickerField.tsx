@@ -395,9 +395,12 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
           onFocus={() => {
             if (suggestions.length > 0) setDropdownOpen(true);
           }}
+          onBlur={() => {
+            window.setTimeout(() => setDropdownOpen(false), 180);
+          }}
           placeholder="Search Google address or type area (e.g. Viman Nagar, Pune)"
           aria-invalid={Boolean(error)}
-          className="h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-9 pr-9 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+          className="h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-9 pr-9 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
         />
         {searchingPlaces && (
           <Loader2
@@ -411,12 +414,16 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
           <ul
             role="listbox"
             aria-label="Google location suggestions"
-            className="absolute z-30 mt-1.5 max-h-56 w-full overflow-y-auto rounded-xl border border-[#090A14]/12 bg-white py-1 shadow-xl"
+            className="absolute z-10 mt-1.5 max-h-56 w-full overflow-y-auto rounded-xl border border-[#090A14]/12 bg-white py-1 shadow-xl"
           >
             {suggestions.map((suggestion, idx) => (
               <li key={`${suggestion.placePrediction?.placeId ?? idx}`}>
                 <button
                   type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    void handleSelectSuggestion(suggestion);
+                  }}
                   onClick={() => void handleSelectSuggestion(suggestion)}
                   className="flex w-full items-start gap-2 px-3.5 py-2.5 text-left text-xs text-[#090A14] transition-colors hover:bg-[#F5EFFD]"
                 >

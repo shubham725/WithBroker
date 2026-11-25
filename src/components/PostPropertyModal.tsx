@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { WHATSAPP_NUMBER_DISPLAY } from '../data/properties';
+import { WHATSAPP_NUMBER_DISPLAY, WITHBROKER_LOGO_URL } from '../data/properties';
 import { submitPublicProperty } from '../lib/firestoreRepo';
 import {
   FurnishingStatus,
@@ -32,6 +32,8 @@ interface PostPropertyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitted?: () => void;
+  ownerOnly?: boolean;
+  standalone?: boolean;
 }
 
 const PROPERTY_TYPES: PropertyType[] = ['1RK', '1BHK', '2BHK', '3BHK'];
@@ -98,8 +100,13 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   isOpen,
   onClose,
   onSubmitted,
+  ownerOnly = false,
+  standalone = false,
 }) => {
-  const [form, setForm] = useState<PropertySubmissionInput>(INITIAL_FORM_STATE);
+  const [form, setForm] = useState<PropertySubmissionInput>({
+    ...INITIAL_FORM_STATE,
+    submitterRole: 'Owner',
+  });
   const [sameAsMobile, setSameAsMobile] = useState(true);
   const [descriptionEdited, setDescriptionEdited] = useState(false);
   const [showMoreSpecs, setShowMoreSpecs] = useState(false);
@@ -107,7 +114,12 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   const [errors, setErrors] = useState<SubmissionValidationErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submittingStage, setSubmittingStage] = useState('Submitting Property...');
   const [successInfo, setSuccessInfo] = useState<SubmissionSuccess | null>(null);
+
+  const overlayScrollRef = useRef<HTMLDivElement | null>(null);
+  const desktopBodyRef = useRef<HTMLDivElement | null>(null);
+  const previewUrlsRef = useRef<Set<string>>(new Set());
 
   const autoDescription = useMemo(
     () => generateAutoPropertyDescription(form),
@@ -131,8 +143,27 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
 
   const displayedDescription = descriptionEdited ? form.description : autoDescription;
 
+  const scrollModalToTop = () => {
+    if (standalone && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    overlayScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    desktopBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Lock background page scroll only in modal mode (standalone page uses natural window scroll)
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || standalone || typeof document === 'undefined') return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen, standalone]);
+
+  useEffect(() => {
+    if (!isOpen || standalone) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !submitting) {
         onClose();
@@ -140,14 +171,16 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, submitting]);
+  }, [isOpen, standalone, onClose, submitting]);
 
-  // Clean up object URLs on unmount
+  // Clean up any remaining preview blob URLs ONLY on unmount (never mid-edit!)
   useEffect(() => {
+    const urls = previewUrlsRef.current;
     return () => {
-      selectedPhotos.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      urls.forEach((url) => URL.revokeObjectURL(url));
+      urls.clear();
     };
-  }, [selectedPhotos]);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -182,38 +215,34 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
     const incoming = Array.from(files);
     const nextPhotos: SelectedPhotoItem[] = [...selectedPhotos];
+    let photoErr: string | undefined;
 
     for (const file of incoming) {
       if (nextPhotos.length >= 8) {
-        setErrors((prev) => ({
-          ...prev,
-          photos: 'Maximum 8 photos allowed per property.',
-        }));
+        photoErr = 'Maximum 8 photos allowed per property.';
         break;
       }
-      if (!allowedTypes.has(file.type)) {
-        setErrors((prev) => ({
-          ...prev,
-          photos: 'Only JPG, PNG, or WebP images are supported.',
-        }));
+      // Mobile galleries occasionally emit empty MIME type or image/jpg
+      if (file.type && !file.type.startsWith('image/')) {
+        photoErr = 'Please select valid image photos (JPG, PNG, or WebP).';
         continue;
       }
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors((prev) => ({
-          ...prev,
-          photos: `"${file.name}" exceeds the 5 MB limit per photo.`,
-        }));
+      // Photos are automatically compressed to <380KB before upload, so allow up to 15 MB raw camera photos
+      if (file.size > 15 * 1024 * 1024) {
+        photoErr = `"${file.name}" is larger than 15 MB. Please choose a smaller photo.`;
         continue;
       }
+      const previewUrl = URL.createObjectURL(file);
+      previewUrlsRef.current.add(previewUrl);
       nextPhotos.push({
         file,
-        previewUrl: URL.createObjectURL(file),
+        previewUrl,
       });
     }
 
+    setErrors((prev) => ({ ...prev, photos: photoErr }));
     setSelectedPhotos(nextPhotos);
     setForm((prev) => ({
       ...prev,
@@ -225,7 +254,10 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   const removePhoto = (index: number) => {
     setSelectedPhotos((prev) => {
       const target = prev[index];
-      if (target) URL.revokeObjectURL(target.previewUrl);
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+        previewUrlsRef.current.delete(target.previewUrl);
+      }
       const updated = prev.filter((_, idx) => idx !== index);
       setForm((f) => ({ ...f, photoNames: updated.map((p) => p.file.name) }));
       return updated;
@@ -234,7 +266,10 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   };
 
   const clearPhotos = () => {
-    selectedPhotos.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    selectedPhotos.forEach((item) => {
+      URL.revokeObjectURL(item.previewUrl);
+      previewUrlsRef.current.delete(item.previewUrl);
+    });
     setSelectedPhotos([]);
     setForm((prev) => ({ ...prev, photoNames: [] }));
     setErrors((prev) => ({ ...prev, photos: undefined }));
@@ -251,6 +286,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
 
     const normalizedInput: PropertySubmissionInput = {
       ...form,
+      submitterRole: ownerOnly ? 'Owner' : form.submitterRole,
       whatsapp: sameAsMobile ? form.mobile : form.whatsapp,
       description: finalDesc,
     };
@@ -258,14 +294,31 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
     const validationErrors = validateSubmissionForm(normalizedInput);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
+      window.requestAnimationFrame(() => {
+        const firstInvalid = overlayScrollRef.current?.querySelector<HTMLElement>(
+          '[aria-invalid="true"]'
+        );
+        if (firstInvalid) {
+          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstInvalid.focus?.({ preventScroll: true });
+        } else {
+          scrollModalToTop();
+        }
+      });
       return;
     }
 
     setSubmitting(true);
+    setSubmittingStage(
+      selectedPhotos.length > 0
+        ? `Preparing ${selectedPhotos.length} photo${selectedPhotos.length === 1 ? '' : 's'}...`
+        : 'Saving property listing...'
+    );
     try {
       const result = await submitPublicProperty(
         normalizedInput,
-        selectedPhotos.map((item) => item.file)
+        selectedPhotos.map((item) => item.file),
+        (stage) => setSubmittingStage(stage)
       );
 
       const waUrl = buildPropertySubmissionWhatsAppUrl(normalizedInput, result.propertyCode);
@@ -277,17 +330,20 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
         submitterName: normalizedInput.name.trim(),
       });
       onSubmitted?.();
+      window.requestAnimationFrame(scrollModalToTop);
     } catch (err: unknown) {
       const msg = (err as Error)?.message || '';
-      if (msg.includes('Please wait')) {
+      if (msg.includes('Please wait') || msg.includes('Photo "')) {
         setServerError(msg);
       } else {
         setServerError(
           'Could not save your submission right now. Please check all required fields and try again.'
         );
       }
+      window.requestAnimationFrame(scrollModalToTop);
     } finally {
       setSubmitting(false);
+      setSubmittingStage('Submitting Property...');
     }
   };
 
@@ -302,47 +358,107 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
     setSuccessInfo(null);
   };
 
+  const errorCount = Object.values(errors).filter(Boolean).length;
+
+  const formHeader = standalone ? (
+    <header className="sticky top-0 z-30 border-b border-[#090A14]/8 bg-white/95 backdrop-blur-xs">
+      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <img
+            src={WITHBROKER_LOGO_URL}
+            alt="WithBroker"
+            className="h-8 w-auto shrink-0 object-contain sm:h-9"
+          />
+          <div className="hidden min-w-0 sm:block">
+            <p className="truncate text-xs font-semibold text-[#6B1CD4]">
+              Direct Owner Form · Free &amp; Fast · No Login Needed
+            </p>
+            <h1
+              id="post-property-modal-title"
+              className="truncate font-display text-lg font-bold text-[#090A14]"
+            >
+              Add Your Flat (Owners Only)
+            </h1>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={onClose}
+          className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#090A14]/12 bg-white px-3 text-xs font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4] disabled:opacity-50"
+        >
+          View Website
+        </button>
+      </div>
+      <div className="border-t border-[#090A14]/6 bg-[#FAF8FF] px-4 py-2 sm:hidden">
+        <p className="text-[11px] font-semibold text-[#6B1CD4]">
+          Direct Owner Form · Free &amp; Fast · No Login Needed
+        </p>
+        <p className="font-display text-sm font-bold text-[#090A14]">
+          Add Your Flat (Owners Only)
+        </p>
+      </div>
+    </header>
+  ) : (
+    <div className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-3 border-b border-[#090A14]/8 bg-white px-4 py-3.5 sm:static sm:px-6 sm:py-4">
+      <div className="min-w-0">
+        <p className="truncate text-[11px] font-semibold text-[#6B1CD4] sm:text-xs">
+          Fast Free Listing · Owners &amp; Brokers · No Login Needed
+        </p>
+        <h2
+          id="post-property-modal-title"
+          className="truncate font-display text-base font-bold text-[#090A14] sm:text-xl"
+        >
+          Add Your Property Free
+        </h2>
+      </div>
+
+      <button
+        type="button"
+        disabled={submitting}
+        onClick={onClose}
+        aria-label="Close post flat modal"
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#090A14]/12 text-[#090A14] transition-colors hover:bg-[#F9F8FC] disabled:opacity-50"
+      >
+        <X className="h-5 w-5" />
+      </button>
+    </div>
+  );
+
+  const outerWrapperClass = standalone
+    ? 'min-h-screen w-full bg-[#F9F8FC] text-[#090A14]'
+    : 'fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-[#F9F8FC] sm:flex sm:items-center sm:justify-center sm:overflow-hidden sm:bg-[#090A14]/65 sm:p-5 sm:backdrop-blur-xs';
+
+  const cardWrapperClass = standalone
+    ? 'flex min-h-screen w-full flex-col bg-[#F9F8FC]'
+    : 'relative flex min-h-full w-full flex-col bg-[#F9F8FC] sm:min-h-0 sm:max-h-[92vh] sm:max-w-3xl sm:overflow-hidden sm:rounded-2xl sm:bg-white sm:shadow-2xl';
+
+  const bodyWrapperClass = standalone
+    ? 'mx-auto w-full max-w-3xl flex-1 px-3.5 py-4 pb-8 sm:px-6 sm:py-6'
+    : 'flex-1 bg-[#F9F8FC] p-3.5 pb-6 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:p-6';
+
   return (
     <div
-      role="dialog"
-      aria-modal="true"
+      ref={overlayScrollRef}
+      role={standalone ? 'main' : 'dialog'}
+      aria-modal={standalone ? undefined : true}
       aria-labelledby="post-property-modal-title"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#090A14]/65 sm:items-center sm:p-5 backdrop-blur-xs"
+      className={outerWrapperClass}
       onClick={() => {
-        if (!submitting) onClose();
+        if (!standalone && !submitting) onClose();
       }}
     >
       <div
-        className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:max-w-3xl sm:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
+        className={cardWrapperClass}
+        onClick={(e) => {
+          if (!standalone) e.stopPropagation();
+        }}
       >
-        {/* Sticky Modal Header */}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#090A14]/8 bg-white px-4 py-3.5 sm:px-6 sm:py-4">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-[#6B1CD4] sm:text-xs">
-              Fast Free Listing · Owners &amp; Brokers · No Login Needed
-            </p>
-            <h2
-              id="post-property-modal-title"
-              className="truncate font-display text-base font-bold text-[#090A14] sm:text-xl"
-            >
-              Add Your Property Free
-            </h2>
-          </div>
+        {formHeader}
 
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={onClose}
-            aria-label="Close post flat modal"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#090A14]/12 text-[#090A14] transition-colors hover:bg-[#F9F8FC] disabled:opacity-50"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto overscroll-contain bg-[#F9F8FC] p-3.5 sm:p-6">
+        {/* Scrollable Body (Native single-document scroll on mobile; bounded inner scroll on desktop) */}
+        <div ref={desktopBodyRef} className={bodyWrapperClass}>
           {successInfo ? (
             <div
               data-testid="submission-confirmation"
@@ -401,7 +517,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onClick={onClose}
                       className="h-11 rounded-xl px-4 text-sm font-semibold text-[#656275] hover:text-[#090A14]"
                     >
-                      Close
+                      {standalone ? 'Explore WithBroker Website' : 'Close'}
                     </button>
                   </div>
                 </div>
@@ -428,7 +544,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
               <div className="rounded-2xl border border-[#090A14]/8 bg-white p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="font-display text-sm font-bold text-[#090A14]">
-                    1. Your Contact Details
+                    {ownerOnly ? '1. Flat Owner Contact Details' : '1. Your Contact Details'}
                   </h3>
                   <span className="inline-flex items-center gap-1 rounded-md bg-[#F5EFFD] px-2 py-0.5 text-[11px] font-semibold text-[#6B1CD4]">
                     <Lock className="h-3 w-3" aria-hidden="true" />
@@ -442,23 +558,30 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 <div className="mt-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                   <div>
                     <span className="block text-xs font-semibold text-[#090A14]">Listing By *</span>
-                    <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] p-1">
-                      {(['Owner', 'Broker'] as const).map((role) => (
-                        <button
-                          key={role}
-                          type="button"
-                          aria-pressed={form.submitterRole === role}
-                          onClick={() => setForm({ ...form, submitterRole: role })}
-                          className={`h-9 rounded-lg text-xs font-semibold transition-colors ${
-                            form.submitterRole === role
-                              ? 'bg-[#6B1CD4] text-white shadow-2xs'
-                              : 'text-[#656275] hover:text-[#090A14]'
-                          }`}
-                        >
-                          {role}
-                        </button>
-                      ))}
-                    </div>
+                    {ownerOnly ? (
+                      <div className="mt-1.5 flex h-11 items-center gap-2 rounded-xl border border-[#6B1CD4]/25 bg-[#F5EFFD]/70 px-3.5 text-xs font-bold text-[#6B1CD4]">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span>Direct Property Owner</span>
+                      </div>
+                    ) : (
+                      <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] p-1">
+                        {(['Owner', 'Broker'] as const).map((role) => (
+                          <button
+                            key={role}
+                            type="button"
+                            aria-pressed={form.submitterRole === role}
+                            onClick={() => setForm({ ...form, submitterRole: role })}
+                            className={`h-9 rounded-lg text-xs font-semibold transition-colors ${
+                              form.submitterRole === role
+                                ? 'bg-[#6B1CD4] text-white shadow-2xs'
+                                : 'text-[#656275] hover:text-[#090A14]'
+                            }`}
+                          >
+                            {role}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -473,7 +596,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       placeholder="e.g. Amit Deshmukh"
                       aria-invalid={Boolean(errors.name)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                     />
                     {errors.name && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -495,7 +618,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => handleMobileChange(e.target.value)}
                       placeholder="10-digit mobile number"
                       aria-invalid={Boolean(errors.mobile)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                     />
                     {errors.mobile && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -531,7 +654,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
                       placeholder="10-digit WhatsApp number"
                       aria-invalid={Boolean(errors.whatsapp)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none disabled:opacity-65"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none disabled:opacity-65 sm:text-sm"
                     />
                     {errors.whatsapp && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -657,7 +780,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       value={form.societyName}
                       onChange={(e) => setForm({ ...form, societyName: e.target.value })}
                       placeholder="e.g. Arihant Niwara, Kamal Nagar"
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                     />
                   </div>
 
@@ -674,7 +797,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       value={form.availableFrom}
                       onChange={(e) => setForm({ ...form, availableFrom: e.target.value })}
                       aria-invalid={Boolean(errors.availableFrom)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                     />
                     {errors.availableFrom && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -700,7 +823,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, monthlyRent: e.target.value })}
                       placeholder="e.g. 16000"
                       aria-invalid={Boolean(errors.monthlyRent)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                     />
                     {errors.monthlyRent && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -726,7 +849,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, securityDeposit: e.target.value })}
                       placeholder="e.g. 35000"
                       aria-invalid={Boolean(errors.securityDeposit)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                     />
                     {errors.securityDeposit && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -761,7 +884,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, brokerageAmount: e.target.value })}
                       placeholder="0 for No Brokerage"
                       aria-invalid={Boolean(errors.brokerageAmount)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                     />
                     {errors.brokerageAmount && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -774,7 +897,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 {/* Fast Multi-Photo Upload */}
                 <div>
                   <label htmlFor="sub-photos" className="block text-xs font-semibold text-[#090A14]">
-                    Flat Photos (Up to 8 · Tap to pick from camera or gallery)
+                    Flat Photos (Up to 8 · Auto-optimized for fast upload)
                   </label>
                   <div className="mt-1.5 rounded-xl border border-dashed border-[#6B1CD4]/35 bg-[#F9F8FC] p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2.5">
@@ -788,7 +911,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       <input
                         id="sub-photos"
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/*"
                         multiple
                         onChange={handlePhotoChange}
                         className="sr-only"
@@ -815,12 +938,13 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
                         {selectedPhotos.map((item, idx) => (
                           <div
-                            key={`${item.file.name}-${idx}`}
+                            key={`${item.previewUrl}`}
                             className="group relative aspect-[4/3] overflow-hidden rounded-xl border border-[#090A14]/10 bg-white"
                           >
                             <img
                               src={item.previewUrl}
                               alt={`Upload preview ${idx + 1}`}
+                              decoding="async"
                               className="h-full w-full object-cover"
                             />
                             <button
@@ -878,7 +1002,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   }}
                   placeholder="Automatically generated from your flat details above — edit only if you want to customize."
                   aria-invalid={Boolean(errors.description)}
-                  className="w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] p-3 text-xs leading-relaxed text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                  className="w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] p-3 text-base leading-relaxed text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                 />
                 {errors.description && (
                   <p role="alert" className="text-xs font-medium text-red-600">
@@ -922,7 +1046,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             max={10}
                             value={form.bathrooms}
                             onChange={(e) => setForm({ ...form, bathrooms: e.target.value })}
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                           />
                           {errors.bathrooms && (
                             <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -946,7 +1070,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             max={10}
                             value={form.balconies}
                             onChange={(e) => setForm({ ...form, balconies: e.target.value })}
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                           />
                         </div>
 
@@ -963,7 +1087,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             value={form.floorNumber}
                             onChange={(e) => setForm({ ...form, floorNumber: e.target.value })}
                             placeholder="e.g. 2"
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                           />
                         </div>
 
@@ -980,7 +1104,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             value={form.totalFloors}
                             onChange={(e) => setForm({ ...form, totalFloors: e.target.value })}
                             placeholder="e.g. 5"
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                           />
                         </div>
 
@@ -997,7 +1121,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             value={form.carpetArea}
                             onChange={(e) => setForm({ ...form, carpetArea: e.target.value })}
                             placeholder="e.g. 620 Sq. Ft."
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                           />
                         </div>
                       </div>
@@ -1035,27 +1159,44 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
           )}
         </div>
 
-        {/* Sticky Bottom Action Bar (Always 1 Thumb-Tap Away on Mobile!) */}
+        {/* Sticky Bottom Action Bar (Always anchored cleanly at bottom on mobile & desktop) */}
         {!successInfo && (
-          <div className="shrink-0 border-t border-[#090A14]/8 bg-white px-4 py-3 sm:px-6 sm:py-4">
-            <button
-              type="submit"
-              form="post-property-form"
-              disabled={submitting}
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6B1CD4] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#5412AD] disabled:opacity-60"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  <span>Submitting Property...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" aria-hidden="true" />
-                  <span>Submit Property Free for Approval</span>
-                </>
+          <div
+            className={
+              standalone
+                ? 'sticky bottom-0 z-30 shrink-0 border-t border-[#090A14]/8 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(9,10,20,0.06)]'
+                : 'sticky bottom-0 z-30 shrink-0 border-t border-[#090A14]/8 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(9,10,20,0.06)] sm:static sm:px-6 sm:py-4 sm:shadow-none'
+            }
+          >
+            <div className={standalone ? 'mx-auto w-full max-w-3xl sm:px-2' : ''}>
+              {errorCount > 0 && !submitting && (
+                <p className="mb-2 text-center text-xs font-semibold text-red-600">
+                  Please fill in {errorCount} highlighted {errorCount === 1 ? 'field' : 'fields'} above before submitting.
+                </p>
               )}
-            </button>
+              <button
+                type="submit"
+                form="post-property-form"
+                disabled={submitting}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6B1CD4] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#5412AD] disabled:opacity-65"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden="true" />
+                    <span className="truncate">{submittingStage}</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>
+                      {ownerOnly
+                        ? 'Submit My Flat Free for Approval'
+                        : 'Submit Property Free for Approval'}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>

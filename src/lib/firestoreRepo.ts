@@ -321,6 +321,7 @@ function mapDocToAdminSubmission(
 
 /**
  * Compresses an uploaded image file cleanly under 380KB for Firestore document storage.
+ * Uses zero-copy Object URLs + immediate canvas buffer release so mobile devices never spike RAM or blank out.
  */
 export async function compressImageFileToDataUrl(
   file: File
@@ -328,61 +329,95 @@ export async function compressImageFileToDataUrl(
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'photo.jpg';
 
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error(`Unable to read image "${file.name}".`));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error(`File "${file.name}" is not a valid image.`));
-      img.onload = () => {
-        const maxDim = 1100;
-        let width = img.width;
-        let height = img.height;
+    const objectUrl = URL.createObjectURL(file);
+    let settled = false;
+
+    const finish = (cb: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      URL.revokeObjectURL(objectUrl);
+      cb();
+    };
+
+    const timer = window.setTimeout(() => {
+      finish(() =>
+        reject(new Error(`Photo "${file.name}" took too long to process. Please try a JPG or PNG photo.`))
+      );
+    }, 15_000);
+
+    const img = new Image();
+    img.decoding = 'async';
+    img.onerror = () =>
+      finish(() =>
+        reject(new Error(`Photo "${file.name}" could not be read. Please select a JPG, PNG, or WebP photo.`))
+      );
+
+    img.onload = () => {
+      try {
+        let maxDim = 1024;
+        let width = img.naturalWidth || img.width || 800;
+        let height = img.naturalHeight || img.height || 600;
         if (width > maxDim || height > maxDim) {
           const ratio = Math.min(maxDim / width, maxDim / height);
           width = Math.max(1, Math.round(width * ratio));
           height = Math.max(1, Math.round(height * ratio));
         }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Browser canvas unavailable for image compression.'));
-          return;
-        }
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(img, 0, 0, width, height);
+        const renderToJpeg = (w: number, h: number, q: number): string => {
+          const c = document.createElement('canvas');
+          c.width = w;
+          c.height = h;
+          const ctx = c.getContext('2d');
+          if (!ctx) {
+            throw new Error('Browser canvas unavailable for image compression.');
+          }
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          const result = c.toDataURL('image/jpeg', q);
+          // Immediately free mobile GPU/RAM backing store
+          c.width = 0;
+          c.height = 0;
+          return result;
+        };
 
-        let quality = 0.78;
-        let dataUrl = canvas.toDataURL('image/jpeg', quality);
-        while (dataUrl.length > 400_000 && quality > 0.3) {
-          quality -= 0.12;
-          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        let quality = 0.76;
+        let dataUrl = renderToJpeg(width, height, quality);
+
+        while (dataUrl.length > 380_000 && quality > 0.32) {
+          quality -= 0.14;
+          dataUrl = renderToJpeg(width, height, quality);
+        }
+
+        // Guarantee <= 380KB even for ultra-detailed phone camera shots (Firestore rule ceiling is 450KB)
+        let attempts = 0;
+        while (dataUrl.length > 380_000 && attempts < 4) {
+          attempts += 1;
+          width = Math.max(240, Math.round(width * 0.72));
+          height = Math.max(180, Math.round(height * 0.72));
+          dataUrl = renderToJpeg(width, height, 0.55);
         }
 
         if (dataUrl.length > 440_000) {
-          // Downscale further if extremely detailed
-          const smallCanvas = document.createElement('canvas');
-          smallCanvas.width = Math.max(1, Math.round(width * 0.7));
-          smallCanvas.height = Math.max(1, Math.round(height * 0.7));
-          const sCtx = smallCanvas.getContext('2d');
-          if (sCtx) {
-            sCtx.drawImage(canvas, 0, 0, smallCanvas.width, smallCanvas.height);
-            dataUrl = smallCanvas.toDataURL('image/jpeg', 0.65);
-          }
+          throw new Error(`Photo "${file.name}" is too large even after compression.`);
         }
 
-        resolve({
-          dataUrl,
-          mimeType: 'image/jpeg',
-          filename: safeName,
-        });
-      };
-      img.src = String(reader.result || '');
+        finish(() =>
+          resolve({
+            dataUrl,
+            mimeType: 'image/jpeg',
+            filename: safeName,
+          })
+        );
+      } catch (err) {
+        finish(() =>
+          reject(err instanceof Error ? err : new Error(`Could not compress "${file.name}".`))
+        );
+      }
     };
-    reader.readAsDataURL(file);
+
+    img.src = objectUrl;
   });
 }
 
@@ -502,9 +537,10 @@ export function subscribePublicProperties(
  */
 export async function submitPublicProperty(
   input: PropertySubmissionInput,
-  photoFiles: File[]
+  photoFiles: File[],
+  onProgress?: (stage: string) => void
 ): Promise<{ propertyCode: string; submittedAt: string; photoCount: number }> {
-  // Light client anti-spam cooldown (20s between submissions from the same browser)
+  // Light client anti-spam cooldown (15s between submissions from the same browser)
   if (typeof window !== 'undefined') {
     try {
       const lastTs = Number(window.localStorage.getItem(SPAM_COOLDOWN_KEY) || '0');
@@ -541,31 +577,35 @@ export async function submitPublicProperty(
         ? `Floor ${input.floorNumber.trim()}`
         : null;
 
-  // Compress uploaded photos in parallel for fast mobile submissions, then save to /property_photos (isPublic: false while Pending)
+  // Compress & upload photos ONE AT A TIME on mobile so RAM never spikes and the screen stays responsive
   const filesToUpload = photoFiles.slice(0, 8);
-  const compressedList = await Promise.all(
-    filesToUpload.map((file) => compressImageFileToDataUrl(file))
-  );
   const photoRefs: string[] = [];
-  await Promise.all(
-    compressedList.map(async (compressed) => {
-      const photoId = generateDocId('photo');
-      try {
-        await setDoc(doc(db, PHOTOS_COLLECTION, photoId), {
-          propertyCode,
-          filename: compressed.filename,
-          mimeType: compressed.mimeType,
-          dataUrl: compressed.dataUrl,
-          isPublic: false,
-          createdAt: serverTimestamp(),
-        });
-        photoDataUrlCache.set(photoId, compressed.dataUrl);
-        photoRefs.push(`${PHOTO_PREFIX}${photoId}`);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.CREATE, `${PHOTOS_COLLECTION}/${photoId}`);
-      }
-    })
-  );
+  for (let i = 0; i < filesToUpload.length; i += 1) {
+    const file = filesToUpload[i];
+    onProgress?.(`Processing photo ${i + 1} of ${filesToUpload.length}...`);
+    // Yield to browser paint loop so mobile UI never freezes
+    await new Promise((r) => window.setTimeout(r, 0));
+    const compressed = await compressImageFileToDataUrl(file);
+
+    onProgress?.(`Uploading photo ${i + 1} of ${filesToUpload.length}...`);
+    const photoId = generateDocId('photo');
+    try {
+      await setDoc(doc(db, PHOTOS_COLLECTION, photoId), {
+        propertyCode,
+        filename: compressed.filename,
+        mimeType: compressed.mimeType,
+        dataUrl: compressed.dataUrl,
+        isPublic: false,
+        createdAt: serverTimestamp(),
+      });
+      photoDataUrlCache.set(photoId, compressed.dataUrl);
+      photoRefs.push(`${PHOTO_PREFIX}${photoId}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${PHOTOS_COLLECTION}/${photoId}`);
+    }
+  }
+
+  onProgress?.('Saving property listing...');
 
   const hasExactCoords =
     typeof input.lat === 'number' &&

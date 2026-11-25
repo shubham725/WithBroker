@@ -42,6 +42,22 @@ function isAdminHash(): boolean {
   );
 }
 
+function isOwnerAddPropertyRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname.replace(/\/+$/, '');
+  const hash = window.location.hash.toLowerCase();
+  const params = new URLSearchParams(window.location.search);
+  return (
+    path === '/owner-add-property' ||
+    path === '/owner-form' ||
+    path === '/owner' ||
+    hash === '#owner-add-property' ||
+    hash === '#owner-form' ||
+    hash === '#owner' ||
+    params.get('mode') === 'owner'
+  );
+}
+
 function isAddPropertyRoute(): boolean {
   if (typeof window === 'undefined') return false;
   return (
@@ -50,9 +66,15 @@ function isAddPropertyRoute(): boolean {
   );
 }
 
+function resolveCurrentView(): 'public' | 'admin' | 'owner-form' {
+  if (isAdminHash()) return 'admin';
+  if (isOwnerAddPropertyRoute()) return 'owner-form';
+  return 'public';
+}
+
 function WithBrokerAppContent() {
-  const [view, setView] = useState<'public' | 'admin'>(() =>
-    isAdminHash() ? 'admin' : 'public'
+  const [view, setView] = useState<'public' | 'admin' | 'owner-form'>(() =>
+    resolveCurrentView()
   );
   const [allProperties, setAllProperties] = useState<PropertyListing[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
@@ -98,10 +120,10 @@ function WithBrokerAppContent() {
     return () => unsubscribe();
   }, [refreshKey]);
 
-  // Sync SPA admin & add-property routes with hash/popstate
+  // Sync SPA admin, owner-form & add-property routes with hash/popstate
   useEffect(() => {
     const syncRoute = () => {
-      setView(isAdminHash() ? 'admin' : 'public');
+      setView(resolveCurrentView());
       if (isAddPropertyRoute()) {
         setPostModalOpen(true);
       }
@@ -209,6 +231,18 @@ function WithBrokerAppContent() {
       <AdminDashboard
         onBackToWebsite={openPublicWebsite}
         onDataChanged={triggerPublicRefresh}
+      />
+    );
+  }
+
+  if (view === 'owner-form') {
+    return (
+      <PostPropertyModal
+        isOpen={true}
+        ownerOnly={true}
+        standalone={true}
+        onClose={openPublicWebsite}
+        onSubmitted={triggerPublicRefresh}
       />
     );
   }

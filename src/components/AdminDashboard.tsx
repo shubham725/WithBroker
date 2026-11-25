@@ -7,10 +7,12 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  Copy,
   Edit3,
   ExternalLink,
   Eye,
   Home,
+  Link2,
   Loader2,
   Lock,
   LogOut,
@@ -561,6 +563,70 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
           </div>
         )}
+
+        {/* Direct Owner Form Link Strip (1-tap Copy or WhatsApp to Flat Owners) */}
+        {(() => {
+          const ownerFormUrl =
+            typeof window !== 'undefined'
+              ? `${window.location.origin}/owner-add-property`
+              : '/owner-add-property';
+          const ownerShareMsg = encodeURIComponent(
+            `Hello! You can directly add your rental flat on WithBroker using this Owner Form link (free, fast, no login needed):\n\n${ownerFormUrl}\n\nOnce you submit, we will verify and list it for tenants.`
+          );
+          const handleCopyOwnerLink = async () => {
+            try {
+              await navigator.clipboard.writeText(ownerFormUrl);
+              showToast('Direct Owner Form link copied! Share it with flat owners on WhatsApp.');
+            } catch {
+              showToast(`Owner link: ${ownerFormUrl}`);
+            }
+          };
+
+          return (
+            <section
+              aria-label="Direct owner submission link"
+              className="mb-5 flex flex-col gap-3 rounded-2xl border border-[#6B1CD4]/20 bg-[#F5EFFD]/60 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#6B1CD4]">
+                  <Link2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>Special Direct Owner Form Link</span>
+                </div>
+                <p className="mt-0.5 truncate text-xs font-medium text-[#524F61]">
+                  {ownerFormUrl}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => void handleCopyOwnerLink()}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#6B1CD4] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[#5412AD]"
+                >
+                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Copy Owner Link</span>
+                </button>
+                <a
+                  href={`https://wa.me/?text=${ownerShareMsg}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#16A34A] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[#15803D]"
+                >
+                  <WhatsAppIcon className="h-3.5 w-3.5 text-white" />
+                  <span>Share to Owner</span>
+                </a>
+                <a
+                  href={ownerFormUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-9 items-center gap-1 rounded-xl border border-[#090A14]/12 bg-white px-3 text-xs font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                >
+                  <span>Preview</span>
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
+              </div>
+            </section>
+          );
+        })()}
 
         {/* 8 KPI Metric Cards */}
         <section aria-label="Property portfolio summary">
