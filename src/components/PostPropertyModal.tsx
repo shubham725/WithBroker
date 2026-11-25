@@ -18,6 +18,7 @@ import {
   buildPropertySubmissionWhatsAppUrl,
   validateSubmissionForm,
 } from '../utils/propertyLogic';
+import { submitPublicProperty } from '../lib/firestoreRepo';
 import { WhatsAppIcon } from './WhatsAppButton';
 
 interface PostPropertyModalProps {
@@ -214,54 +215,27 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
 
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('name', normalizedInput.name.trim());
-      formData.append('mobile', normalizedInput.mobile.trim());
-      formData.append('whatsapp', normalizedInput.whatsapp.trim());
-      formData.append('submitterRole', normalizedInput.submitterRole);
-      formData.append('propertyType', normalizedInput.propertyType);
-      formData.append('location', normalizedInput.location.trim());
-      formData.append('societyName', normalizedInput.societyName.trim());
-      formData.append('monthlyRent', normalizedInput.monthlyRent.trim());
-      formData.append('securityDeposit', normalizedInput.securityDeposit.trim());
-      formData.append('brokerageAmount', normalizedInput.brokerageAmount.trim() || '0');
-      formData.append('furnishingStatus', normalizedInput.furnishingStatus);
-      formData.append('availableFrom', normalizedInput.availableFrom.trim());
-      formData.append('bathrooms', normalizedInput.bathrooms.trim());
-      formData.append('balconies', normalizedInput.balconies.trim() || '0');
-      formData.append('floorNumber', normalizedInput.floorNumber.trim());
-      formData.append('totalFloors', normalizedInput.totalFloors.trim());
-      formData.append('carpetArea', normalizedInput.carpetArea.trim());
-      formData.append('description', normalizedInput.description.trim());
-      formData.append('facilities', JSON.stringify(normalizedInput.facilities));
-      formData.append('website', '');
+      const result = await submitPublicProperty(
+        normalizedInput,
+        selectedPhotos.map((item) => item.file)
+      );
 
-      for (const item of selectedPhotos) {
-        formData.append('photos', item.file);
-      }
-
-      const response = await fetch('/api/submissions', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setServerError(data.error || 'Could not save your submission. Please check the fields and try again.');
-        return;
-      }
-
-      const waUrl = buildPropertySubmissionWhatsAppUrl(normalizedInput, data.propertyCode);
+      const waUrl = buildPropertySubmissionWhatsAppUrl(normalizedInput, result.propertyCode);
       setSuccessInfo({
-        propertyCode: data.propertyCode,
-        submittedAt: data.submittedAt,
-        photoCount: data.photoCount ?? selectedPhotos.length,
+        propertyCode: result.propertyCode,
+        submittedAt: result.submittedAt,
+        photoCount: result.photoCount,
         whatsAppUrl: waUrl,
         submitterName: normalizedInput.name.trim(),
       });
       onSubmitted?.();
-    } catch {
-      setServerError('Network error while submitting your property. Please try again.');
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || '';
+      if (msg.includes('Please wait')) {
+        setServerError(msg);
+      } else {
+        setServerError('Could not save your submission right now. Please check all fields and try again.');
+      }
     } finally {
       setSubmitting(false);
     }

@@ -28,6 +28,15 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { WITHBROKER_LOGO_URL } from '../data/properties';
 import {
+  adminDeleteSubmission,
+  adminEditSubmission,
+  adminUpdateSubmissionStatus,
+  ensureInitialCatalogSeededByAdmin,
+  listAdminNotificationsFromFirestore,
+  listAdminSubmissionsAndStats,
+  markAllAdminNotificationsRead,
+} from '../lib/firestoreRepo';
+import {
   AdminDashboardStats,
   AdminNotification,
   AdminPropertyRecord,
@@ -87,11 +96,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onBackToWebsite,
   onDataChanged,
 }) => {
-  const { user, isAdmin, authLoading, authError, signInWithGoogle, logout, getIdToken } = useAuth();
+  const { user, isAdmin, authLoading, authError, signInWithGoogle, logout } = useAuth();
 
   const [properties, setProperties] = useState<AdminPropertyRecord[]>([]);
   const [stats, setStats] = useState<AdminDashboardStats>(EMPTY_STATS);
-  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [notifications, setNotifications] = useState<Array<AdminNotification & { docId: string }>>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [actionBusyId, setActionBusyId] = useState<number | null>(null);
@@ -121,38 +130,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setLoading(true);
     setErrorBanner(null);
     try {
-      const token = await getIdToken();
-      if (!token) return;
-
-      const [propRes, notifRes] = await Promise.all([
-        fetch('/api/admin/properties', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch('/api/admin/notifications', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      await ensureInitialCatalogSeededByAdmin();
+      const [propData, notifData] = await Promise.all([
+        listAdminSubmissionsAndStats(),
+        listAdminNotificationsFromFirestore(),
       ]);
 
-      if (!propRes.ok) {
-        const err = await propRes.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to load properties.');
-      }
-
-      const propData = await propRes.json();
-      setProperties(propData.properties ?? []);
-      setStats(propData.stats ?? EMPTY_STATS);
-
-      if (notifRes.ok) {
-        const notifData = await notifRes.json();
-        setNotifications(notifData.notifications ?? []);
-        setUnreadCount(notifData.unreadCount ?? 0);
-      }
+      setProperties(propData.properties);
+      setStats(propData.stats);
+      setNotifications(notifData.notifications);
+      setUnreadCount(notifData.unreadCount);
     } catch (err: unknown) {
       setErrorBanner((err as Error)?.message || 'Unable to load dashboard data.');
     } finally {
       setLoading(false);
     }
-  }, [getIdToken, isAdmin]);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -168,22 +161,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setActionBusyId(property.dbId);
     setErrorBanner(null);
     try {
-      const token = await getIdToken();
-      if (!token) return;
-
-      const res = await fetch(`/api/admin/properties/${property.dbId}/status`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: nextStatus, rejectionReason: reason }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to update status.');
-      }
+      await adminUpdateSubmissionStatus(property.propertyCode, nextStatus, reason);
 
       showToast(
         nextStatus === 'Available'
@@ -208,18 +186,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setActionBusyId(deleteTarget.dbId);
     setErrorBanner(null);
     try {
-      const token = await getIdToken();
-      if (!token) return;
-
-      const res = await fetch(`/api/admin/properties/${deleteTarget.dbId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to delete property.');
-      }
+      await adminDeleteSubmission(deleteTarget.propertyCode);
 
       showToast(`${deleteTarget.propertyCode} permanently deleted.`);
       setDeleteTarget(null);
@@ -237,22 +204,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setActionBusyId(editingProperty.dbId);
     setErrorBanner(null);
     try {
-      const token = await getIdToken();
-      if (!token) return;
-
-      const res = await fetch(`/api/admin/properties/${editingProperty.dbId}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedFields),
+      await adminEditSubmission(editingProperty.propertyCode, {
+        title: String(updatedFields.title ?? editingProperty.title),
+        propertyType: (updatedFields.propertyType ?? editingProperty.propertyType) as PropertyType,
+        locality: String(updatedFields.locality ?? editingProperty.locality),
+        societyName:
+          updatedFields.societyName !== undefined
+            ? updatedFields.societyName ?? null
+            : editingProperty.societyName ?? null,
+        monthlyRent: Number(updatedFields.monthlyRent ?? editingProperty.monthlyRent),
+        securityDeposit:
+          updatedFields.securityDeposit !== undefined
+            ? updatedFields.securityDeposit
+            : editingProperty.securityDeposit,
+        brokerageAmount: Number(
+          updatedFields.brokerageAmount ?? editingProperty.brokerageAmount ?? 0
+        ),
+        furnishing: (updatedFields.furnishing ?? editingProperty.furnishing) as FurnishingStatus,
+        availableFrom: String(updatedFields.availableFrom ?? editingProperty.availableFrom),
+        bathrooms: Number(updatedFields.bathrooms ?? editingProperty.bathrooms),
+        balconies: Number(updatedFields.balconies ?? editingProperty.balconies),
+        floorNumber:
+          updatedFields.floorNumber !== undefined
+            ? updatedFields.floorNumber ?? null
+            : editingProperty.floorNumber ?? null,
+        totalFloors:
+          updatedFields.totalFloors !== undefined
+            ? updatedFields.totalFloors ?? null
+            : editingProperty.totalFloors ?? null,
+        carpetArea:
+          updatedFields.carpetArea !== undefined
+            ? updatedFields.carpetArea ?? null
+            : editingProperty.carpetArea ?? null,
+        fullDescription: String(updatedFields.fullDescription ?? editingProperty.fullDescription),
+        submitterRole: (updatedFields.submitterRole ??
+          editingProperty.submitterRole) as SubmitterRole,
       });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save changes.');
-      }
 
       showToast(`${editingProperty.propertyCode} updated successfully.`);
       setEditingProperty(null);
@@ -267,16 +254,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleMarkAllRead = async () => {
     try {
-      const token = await getIdToken();
-      if (!token) return;
-      await fetch('/api/admin/notifications/mark-read', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
+      const unreadIds = notifications.filter((n) => !n.isRead).map((n) => n.docId);
+      await markAllAdminNotificationsRead(unreadIds);
       setUnreadCount(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch {

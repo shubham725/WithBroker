@@ -1,0 +1,262 @@
+{
+  "entities": {
+    "PublicProperty": {
+      "title": "PublicProperty",
+      "description": "Approved rental flat listing visible publicly on WithBroker (contains zero private owner/broker contact PII).",
+      "type": "object",
+      "properties": {
+        "propertyCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 24,
+          "pattern": "^WB-[0-9]{4,8}$"
+        },
+        "title": { "type": "string", "minLength": 3, "maxLength": 180 },
+        "propertyType": { "type": "string", "enum": ["1RK", "1BHK", "2BHK", "3BHK"] },
+        "locality": { "type": "string", "minLength": 2, "maxLength": 180 },
+        "subLocality": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "localitySlug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "societyName": { "type": "string", "maxLength": 160 },
+        "publicAreaNote": { "type": "string", "maxLength": 260 },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "monthlyRent": { "type": "number" },
+        "securityDeposit": { "type": "number" },
+        "brokerageStatus": { "type": "string", "maxLength": 40 },
+        "brokerageAmount": { "type": "number" },
+        "maintenanceCharges": { "type": "string", "maxLength": 120 },
+        "furnishing": {
+          "type": "string",
+          "enum": ["Unfurnished", "Semi-Furnished", "Fully Furnished"]
+        },
+        "carpetArea": { "type": "string", "maxLength": 60 },
+        "builtUpArea": { "type": "string", "maxLength": 60 },
+        "floorNumber": { "type": "string", "maxLength": 30 },
+        "totalFloors": { "type": "string", "maxLength": 30 },
+        "floorInfo": { "type": "string", "maxLength": 80 },
+        "facing": { "type": "string", "maxLength": 60 },
+        "bathrooms": { "type": "number" },
+        "bathroomType": { "type": "string", "maxLength": 80 },
+        "balconies": { "type": "number" },
+        "parking": { "type": "string", "maxLength": 100 },
+        "waterAvailability": { "type": "string", "maxLength": 100 },
+        "liftAvailability": { "type": "string", "maxLength": 100 },
+        "suitableFor": { "type": "string", "maxLength": 80 },
+        "availableFrom": { "type": "string", "maxLength": 60 },
+        "availabilityLabel": { "type": "string", "enum": ["Available", "Rented Out"] },
+        "workflowStatus": { "type": "string", "enum": ["Available", "Rented"] },
+        "submitterRole": { "type": "string", "enum": ["Owner", "Broker"] },
+        "shortDescription": { "type": "string", "maxLength": 400 },
+        "fullDescription": { "type": "string", "maxLength": 2600 },
+        "additionalNotes": { "type": "string", "maxLength": 500 },
+        "facilities": { "type": "array" },
+        "images": { "type": "array" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "propertyCode",
+        "title",
+        "propertyType",
+        "locality",
+        "subLocality",
+        "localitySlug",
+        "monthlyRent",
+        "furnishing",
+        "bathrooms",
+        "balconies",
+        "workflowStatus",
+        "availabilityLabel",
+        "submitterRole",
+        "shortDescription",
+        "fullDescription",
+        "facilities",
+        "images",
+        "submittedAt",
+        "updatedAt"
+      ]
+    },
+    "PropertySubmission": {
+      "title": "PropertySubmission",
+      "description": "Full rental property submission including private owner/broker contact PII. Public can only create Pending records; only the sole admin can read, approve, reject, edit, or delete.",
+      "type": "object",
+      "properties": {
+        "propertyCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 24,
+          "pattern": "^WB-[0-9]{4,8}$"
+        },
+        "title": { "type": "string", "minLength": 3, "maxLength": 180 },
+        "propertyType": { "type": "string", "enum": ["1RK", "1BHK", "2BHK", "3BHK"] },
+        "locality": { "type": "string", "minLength": 2, "maxLength": 180 },
+        "subLocality": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "localitySlug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "societyName": { "type": "string", "maxLength": 160 },
+        "publicAreaNote": { "type": "string", "maxLength": 260 },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "monthlyRent": { "type": "number" },
+        "securityDeposit": { "type": "number" },
+        "brokerageStatus": { "type": "string", "maxLength": 40 },
+        "brokerageAmount": { "type": "number" },
+        "maintenanceCharges": { "type": "string", "maxLength": 120 },
+        "furnishing": {
+          "type": "string",
+          "enum": ["Unfurnished", "Semi-Furnished", "Fully Furnished"]
+        },
+        "carpetArea": { "type": "string", "maxLength": 60 },
+        "builtUpArea": { "type": "string", "maxLength": 60 },
+        "floorNumber": { "type": "string", "maxLength": 30 },
+        "totalFloors": { "type": "string", "maxLength": 30 },
+        "floorInfo": { "type": "string", "maxLength": 80 },
+        "facing": { "type": "string", "maxLength": 60 },
+        "bathrooms": { "type": "number" },
+        "bathroomType": { "type": "string", "maxLength": 80 },
+        "balconies": { "type": "number" },
+        "parking": { "type": "string", "maxLength": 100 },
+        "waterAvailability": { "type": "string", "maxLength": 100 },
+        "liftAvailability": { "type": "string", "maxLength": 100 },
+        "suitableFor": { "type": "string", "maxLength": 80 },
+        "availableFrom": { "type": "string", "maxLength": 60 },
+        "shortDescription": { "type": "string", "maxLength": 400 },
+        "fullDescription": { "type": "string", "maxLength": 2600 },
+        "additionalNotes": { "type": "string", "maxLength": 500 },
+        "facilities": { "type": "array" },
+        "images": { "type": "array" },
+        "submitterName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "submitterMobile": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 15,
+          "pattern": "^[6-9][0-9]{9}$"
+        },
+        "submitterWhatsapp": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 15,
+          "pattern": "^[6-9][0-9]{9}$"
+        },
+        "submitterRole": { "type": "string", "enum": ["Owner", "Broker"] },
+        "workflowStatus": {
+          "type": "string",
+          "enum": ["Pending", "Available", "Rejected", "Rented"]
+        },
+        "rejectionReason": { "type": "string", "maxLength": 500 },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "propertyCode",
+        "title",
+        "propertyType",
+        "locality",
+        "subLocality",
+        "localitySlug",
+        "monthlyRent",
+        "furnishing",
+        "bathrooms",
+        "balconies",
+        "shortDescription",
+        "fullDescription",
+        "facilities",
+        "images",
+        "submitterName",
+        "submitterMobile",
+        "submitterWhatsapp",
+        "submitterRole",
+        "workflowStatus",
+        "submittedAt",
+        "updatedAt"
+      ]
+    },
+    "PropertyPhoto": {
+      "title": "PropertyPhoto",
+      "description": "Compressed rental flat photo stored in its own document (strictly under 450KB). Private while Pending/Rejected; publicly readable only when Admin marks isPublic=true.",
+      "type": "object",
+      "properties": {
+        "propertyCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 24,
+          "pattern": "^WB-[0-9]{4,8}$"
+        },
+        "filename": { "type": "string", "minLength": 1, "maxLength": 140 },
+        "mimeType": {
+          "type": "string",
+          "enum": ["image/jpeg", "image/png", "image/webp"]
+        },
+        "dataUrl": { "type": "string", "minLength": 30, "maxLength": 450000 },
+        "isPublic": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["propertyCode", "filename", "mimeType", "dataUrl", "isPublic", "createdAt"]
+    },
+    "AdminNotification": {
+      "title": "AdminNotification",
+      "description": "Admin dashboard notification feed for new submissions and status changes.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["submission", "approved", "rejected", "rented", "available", "deleted"]
+        },
+        "propertyCode": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 24,
+          "pattern": "^WB-[0-9]{4,8}$"
+        },
+        "title": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 400 },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "propertyCode", "title", "message", "isRead", "createdAt"]
+    },
+    "AppMetadata": {
+      "title": "AppMetadata",
+      "description": "System metadata document tracking initial catalog seed state.",
+      "type": "object",
+      "properties": {
+        "seeded": { "type": "boolean" },
+        "seededAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["seeded", "seededAt"]
+    }
+  },
+  "firestore": {
+    "/public_properties/{propertyId}": {
+      "schema": { "$ref": "#/entities/PublicProperty" },
+      "description": "Publicly readable approved rental listings (Available and Rented only, zero private contact PII)."
+    },
+    "/property_submissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/PropertySubmission" },
+      "description": "All property submissions with private owner/broker contact info. Public create-only (Pending only); sole admin read/write."
+    },
+    "/property_photos/{photoId}": {
+      "schema": { "$ref": "#/entities/PropertyPhoto" },
+      "description": "Compressed uploaded property images. Public create-only with isPublic=false; public get only when isPublic=true; sole admin full access."
+    },
+    "/admin_notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/AdminNotification" },
+      "description": "Notifications for sole admin. Public create-only for unread submission alerts; sole admin full read/update/delete."
+    },
+    "/app_meta/{metaId}": {
+      "schema": { "$ref": "#/entities/AppMetadata" },
+      "description": "Metadata tracking whether initial Pune listings have been seeded into Firestore. Readable publicly; writable only by sole admin."
+    }
+  }
+}

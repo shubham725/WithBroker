@@ -11,20 +11,12 @@ interface ExploreAreasSectionProps {
   onSelectLocation: (slug: string) => void;
 }
 
-const DISPLAY_ORDER = ['viman-nagar', 'wadgaon-sheri', 'somnath-nagar', 'other'];
-
 export const ExploreAreasSection: React.FC<ExploreAreasSectionProps> = ({
   allProperties,
   localities,
   selectedLocation,
   onSelectLocation,
 }) => {
-  const orderedLocalities = [...localities].sort((a, b) => {
-    const idxA = DISPLAY_ORDER.indexOf(a.slug);
-    const idxB = DISPLAY_ORDER.indexOf(b.slug);
-    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
-  });
-
   return (
     <section id="areas" className="bg-[#F9F8FC] pt-4 pb-8 sm:pt-6 sm:pb-10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -34,7 +26,7 @@ export const ExploreAreasSection: React.FC<ExploreAreasSectionProps> = ({
               Explore Flats by <span className="text-[#6B1CD4]">Location</span>
             </h2>
             <p className="mt-1 text-xs sm:text-sm text-[#656275]">
-              Discover rental properties in our key areas.
+              Discover approved rental properties automatically organized by Pune area.
             </p>
           </div>
 
@@ -43,14 +35,19 @@ export const ExploreAreasSection: React.FC<ExploreAreasSectionProps> = ({
             onClick={() => onSelectLocation('all')}
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#090A14] transition-colors hover:text-[#6B1CD4]"
           >
-            <span>View All Areas</span>
+            <span>View All Areas ({allProperties.length})</span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-          {orderedLocalities.map((loc) => {
-            const count = getLocalityListingCount(allProperties, loc);
+        <div className="mt-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {localities.map((loc) => {
+            const availCount = getLocalityListingCount(allProperties, loc);
+            const totalInArea = allProperties.filter(
+              (p) =>
+                p.localitySlug === loc.slug ||
+                loc.matchSlugs.includes(p.localitySlug)
+            ).length;
             const isSelected = selectedLocation === loc.slug;
             const displayName = loc.slug === 'other' ? 'Nearby Areas' : loc.name;
             return (
@@ -80,7 +77,8 @@ export const ExploreAreasSection: React.FC<ExploreAreasSectionProps> = ({
                     </span>
                   </div>
                   <p className="mt-1 text-xs font-medium text-[#656275] tabular-nums">
-                    {count} {count === 1 ? 'Flat' : 'Flats'}
+                    {availCount} Available
+                    {totalInArea > availCount ? ` · ${totalInArea - availCount} Rented` : ''}
                   </p>
                 </div>
 

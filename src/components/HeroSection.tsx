@@ -9,24 +9,17 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import { PropertyType, SearchFiltersState } from '../types/property';
+import { LocalityConfig, PropertyType, SearchFiltersState } from '../types/property';
 
 interface HeroSectionProps {
   filters: SearchFiltersState;
+  localities: LocalityConfig[];
   onFilterChange: (next: SearchFiltersState) => void;
   onSearchSubmit: () => void;
   onOpenPostModal: () => void;
 }
 
 const HERO_IMAGE_URL = '/src/assets/images/hero_pune_apartments_1794817950867.jpg';
-
-const LOCATION_OPTIONS = [
-  { value: 'all', label: 'All Locations' },
-  { value: 'viman-nagar', label: 'Viman Nagar' },
-  { value: 'wadgaon-sheri', label: 'Wadgaon Sheri' },
-  { value: 'somnath-nagar', label: 'Somnath Nagar' },
-  { value: 'other', label: 'Nearby Areas' },
-];
 
 const PROPERTY_TYPE_OPTIONS: Array<{ value: 'all' | PropertyType; label: string }> = [
   { value: 'all', label: 'All Types' },
@@ -47,10 +40,18 @@ const BUDGET_OPTIONS = [
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
   filters,
+  localities,
   onFilterChange,
   onSearchSubmit,
   onOpenPostModal,
 }) => {
+  const locationOptions = [
+    { value: 'all', label: 'All Locations' },
+    ...localities.map((loc) => ({
+      value: loc.slug,
+      label: loc.slug === 'other' ? 'Nearby Areas' : loc.name,
+    })),
+  ];
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearchSubmit();
@@ -196,7 +197,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   }
                   className="h-8 w-full bg-transparent text-sm font-semibold text-[#090A14] focus:outline-none"
                 >
-                  {LOCATION_OPTIONS.map((opt) => (
+                  {locationOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>

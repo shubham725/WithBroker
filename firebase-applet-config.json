@@ -3,6 +3,7 @@
   "appId": "1:675207847883:web:e0097c39931948f8fa204e",
   "apiKey": "AIzaSyCp6ad3Ik9vO4iW7dPOFWZkLyfxKrE9U0c",
   "authDomain": "arcane-fort-qvc14.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-withbroker-27c2512f-6329-4c63-a8d3-25d926a9fd8c",
   "storageBucket": "arcane-fort-qvc14.firebasestorage.app",
   "messagingSenderId": "675207847883",
   "measurementId": "",

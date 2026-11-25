@@ -13,7 +13,10 @@ import { PropertyGrid } from './components/PropertyGrid';
 import { SharePropertyModal } from './components/SharePropertyModal';
 import { FloatingWhatsAppButton } from './components/WhatsAppButton';
 import { AuthProvider } from './contexts/AuthContext';
-import { LOCALITIES } from './data/properties';
+import {
+  buildDynamicLocalities,
+  subscribePublicProperties,
+} from './lib/firestoreRepo';
 import { PropertyListing, SearchFiltersState } from './types/property';
 import { filterProperties } from './utils/propertyLogic';
 
@@ -73,37 +76,27 @@ function WithBrokerAppContent() {
     }
   });
 
-  const fetchPublicListings = useCallback(async () => {
-    setLoadingListings(true);
-    setLoadError(null);
-    let lastErr: unknown = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const res = await fetch('/api/properties', {
-          headers: { Accept: 'application/json' },
-        });
-        const contentType = res.headers.get('content-type') || '';
-        if (!res.ok || !contentType.includes('application/json')) {
-          throw new Error('Could not load available rental flats.');
-        }
-        const data = await res.json();
-        setAllProperties(Array.isArray(data.properties) ? data.properties : []);
-        setLoadingListings(false);
-        return;
-      } catch (err: unknown) {
-        lastErr = err;
-        if (attempt < 2) {
-          await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
-        }
-      }
-    }
-    setLoadError((lastErr as Error)?.message || 'Unable to load rental flats right now.');
-    setLoadingListings(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const triggerPublicRefresh = useCallback(() => {
+    setRefreshKey((k) => k + 1);
   }, []);
 
   useEffect(() => {
-    void fetchPublicListings();
-  }, [fetchPublicListings]);
+    setLoadingListings(true);
+    setLoadError(null);
+    const unsubscribe = subscribePublicProperties(
+      (listings) => {
+        setAllProperties(listings);
+        setLoadError(null);
+        setLoadingListings(false);
+      },
+      () => {
+        setLoadingListings(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [refreshKey]);
 
   // Sync SPA admin & add-property routes with hash/popstate
   useEffect(() => {
@@ -153,9 +146,14 @@ function WithBrokerAppContent() {
     }
   }, [allProperties]);
 
+  const dynamicLocalities = useMemo(
+    () => buildDynamicLocalities(allProperties),
+    [allProperties]
+  );
+
   const filteredListings = useMemo(
-    () => filterProperties(allProperties, filters, LOCALITIES, savedIds),
-    [allProperties, filters, savedIds]
+    () => filterProperties(allProperties, filters, dynamicLocalities, savedIds),
+    [allProperties, filters, dynamicLocalities, savedIds]
   );
 
   const handleToggleSave = (propertyId: string) => {
@@ -203,14 +201,14 @@ function WithBrokerAppContent() {
       window.history.pushState(null, '', '/');
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
-    void fetchPublicListings();
+    triggerPublicRefresh();
   };
 
   if (view === 'admin') {
     return (
       <AdminDashboard
         onBackToWebsite={openPublicWebsite}
-        onDataChanged={() => void fetchPublicListings()}
+        onDataChanged={triggerPublicRefresh}
       />
     );
   }
@@ -247,6 +245,7 @@ function WithBrokerAppContent() {
       <main className="flex-1">
         <HeroSection
           filters={filters}
+          localities={dynamicLocalities}
           onFilterChange={setFilters}
           onSearchSubmit={handleHeroSearchSubmit}
           onOpenPostModal={() => setPostModalOpen(true)}
@@ -254,7 +253,7 @@ function WithBrokerAppContent() {
 
         <ExploreAreasSection
           allProperties={allProperties}
-          localities={LOCALITIES}
+          localities={dynamicLocalities}
           selectedLocation={filters.location}
           onSelectLocation={handleSelectArea}
         />
@@ -269,7 +268,7 @@ function WithBrokerAppContent() {
                 <p className="mt-1.5 text-sm text-[#656275]">{loadError}</p>
                 <button
                   type="button"
-                  onClick={() => void fetchPublicListings()}
+                  onClick={triggerPublicRefresh}
                   className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[#6B1CD4] px-5 text-sm font-semibold text-white hover:bg-[#5412AD]"
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -291,7 +290,7 @@ function WithBrokerAppContent() {
           <PropertyGrid
             allProperties={allProperties}
             properties={filteredListings}
-            localities={LOCALITIES}
+            localities={dynamicLocalities}
             filters={filters}
             savedIds={savedIds}
             onToggleSave={handleToggleSave}

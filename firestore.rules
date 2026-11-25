@@ -1,0 +1,347 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------
+    // Global Hardened Primitives
+    // ---------------------------------------------------------
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Strictly ONE single sole admin account (verified Google email only)
+    function isSoleAdmin() {
+      return isSignedIn()
+        && request.auth.token.email == 'yogeshbkumbhar0.2@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string
+        && id.size() >= 1
+        && id.size() <= 128
+        && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOptString(data, key, maxLen) {
+      return !(key in data)
+        || data[key] == null
+        || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function isValidStringList(val, maxLen) {
+      return val is list
+        && val.size() <= maxLen
+        && (val.size() == 0 || (val[0] is string && val[0].size() <= 200));
+    }
+
+    function isValidPropertyType(val) {
+      return val in ['1RK', '1BHK', '2BHK', '3BHK'];
+    }
+
+    function isValidFurnishing(val) {
+      return val in ['Unfurnished', 'Semi-Furnished', 'Fully Furnished'];
+    }
+
+    function isValidSubmitterRole(val) {
+      return val in ['Owner', 'Broker'];
+    }
+
+    // ---------------------------------------------------------
+    // Validation Blueprint: PublicProperty (Zero PII)
+    // ---------------------------------------------------------
+    function isValidPublicProperty(data) {
+      return data.keys().hasAll([
+          'propertyCode', 'title', 'propertyType', 'locality', 'subLocality',
+          'localitySlug', 'publicAreaNote', 'lat', 'lng', 'monthlyRent',
+          'brokerageStatus', 'brokerageAmount', 'furnishing', 'bathrooms',
+          'bathroomType', 'balconies', 'parking', 'waterAvailability',
+          'liftAvailability', 'suitableFor', 'availableFrom', 'availabilityLabel',
+          'workflowStatus', 'submitterRole', 'shortDescription', 'fullDescription',
+          'additionalNotes', 'facilities', 'images', 'submittedAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'propertyCode', 'title', 'propertyType', 'locality', 'subLocality',
+          'localitySlug', 'societyName', 'publicAreaNote', 'lat', 'lng',
+          'monthlyRent', 'securityDeposit', 'brokerageStatus', 'brokerageAmount',
+          'maintenanceCharges', 'furnishing', 'carpetArea', 'builtUpArea',
+          'floorNumber', 'totalFloors', 'floorInfo', 'facing', 'bathrooms',
+          'bathroomType', 'balconies', 'parking', 'waterAvailability',
+          'liftAvailability', 'suitableFor', 'availableFrom', 'availabilityLabel',
+          'workflowStatus', 'submitterRole', 'shortDescription', 'fullDescription',
+          'additionalNotes', 'facilities', 'images', 'submittedAt', 'approvedAt',
+          'updatedAt'
+        ])
+        && data.propertyCode is string && data.propertyCode.size() >= 4 && data.propertyCode.size() <= 24 && data.propertyCode.matches('^WB-[0-9]{4,8}$')
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 180
+        && isValidPropertyType(data.propertyType)
+        && data.locality is string && data.locality.size() >= 2 && data.locality.size() <= 180
+        && data.subLocality is string && data.subLocality.size() >= 2 && data.subLocality.size() <= 140
+        && data.localitySlug is string && data.localitySlug.size() >= 2 && data.localitySlug.size() <= 80 && data.localitySlug.matches('^[a-z0-9-]+$')
+        && isOptString(data, 'societyName', 160)
+        && data.publicAreaNote is string && data.publicAreaNote.size() <= 260
+        && data.lat is number && data.lat >= -90 && data.lat <= 90
+        && data.lng is number && data.lng >= -180 && data.lng <= 180
+        && data.monthlyRent is number && data.monthlyRent >= 1000 && data.monthlyRent <= 500000
+        && (!('securityDeposit' in data) || data.securityDeposit == null || (data.securityDeposit is number && data.securityDeposit >= 0 && data.securityDeposit <= 5000000))
+        && data.brokerageStatus is string && data.brokerageStatus.size() <= 40
+        && data.brokerageAmount is number && data.brokerageAmount >= 0 && data.brokerageAmount <= 1000000
+        && isOptString(data, 'maintenanceCharges', 120)
+        && isValidFurnishing(data.furnishing)
+        && isOptString(data, 'carpetArea', 60)
+        && isOptString(data, 'builtUpArea', 60)
+        && isOptString(data, 'floorNumber', 30)
+        && isOptString(data, 'totalFloors', 30)
+        && isOptString(data, 'floorInfo', 80)
+        && isOptString(data, 'facing', 60)
+        && data.bathrooms is number && data.bathrooms >= 1 && data.bathrooms <= 10
+        && data.bathroomType is string && data.bathroomType.size() <= 80
+        && data.balconies is number && data.balconies >= 0 && data.balconies <= 10
+        && data.parking is string && data.parking.size() <= 100
+        && data.waterAvailability is string && data.waterAvailability.size() <= 100
+        && data.liftAvailability is string && data.liftAvailability.size() <= 100
+        && data.suitableFor is string && data.suitableFor.size() <= 80
+        && data.availableFrom is string && data.availableFrom.size() <= 60
+        && data.availabilityLabel in ['Available', 'Rented Out']
+        && data.workflowStatus in ['Available', 'Rented']
+        && isValidSubmitterRole(data.submitterRole)
+        && data.shortDescription is string && data.shortDescription.size() <= 400
+        && data.fullDescription is string && data.fullDescription.size() >= 10 && data.fullDescription.size() <= 2600
+        && data.additionalNotes is string && data.additionalNotes.size() <= 500
+        && isValidStringList(data.facilities, 15)
+        && isValidStringList(data.images, 15)
+        && data.submittedAt is timestamp
+        && (!('approvedAt' in data) || data.approvedAt == null || data.approvedAt is timestamp)
+        && data.updatedAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
+    // Validation Blueprint: PropertySubmission (Includes Private PII)
+    // ---------------------------------------------------------
+    function isValidSubmission(data) {
+      return data.keys().hasAll([
+          'propertyCode', 'title', 'propertyType', 'locality', 'subLocality',
+          'localitySlug', 'publicAreaNote', 'lat', 'lng', 'monthlyRent',
+          'brokerageStatus', 'brokerageAmount', 'furnishing', 'bathrooms',
+          'bathroomType', 'balconies', 'parking', 'waterAvailability',
+          'liftAvailability', 'suitableFor', 'availableFrom', 'shortDescription',
+          'fullDescription', 'additionalNotes', 'facilities', 'images',
+          'submitterName', 'submitterMobile', 'submitterWhatsapp', 'submitterRole',
+          'workflowStatus', 'submittedAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'propertyCode', 'title', 'propertyType', 'locality', 'subLocality',
+          'localitySlug', 'societyName', 'publicAreaNote', 'lat', 'lng',
+          'monthlyRent', 'securityDeposit', 'brokerageStatus', 'brokerageAmount',
+          'maintenanceCharges', 'furnishing', 'carpetArea', 'builtUpArea',
+          'floorNumber', 'totalFloors', 'floorInfo', 'facing', 'bathrooms',
+          'bathroomType', 'balconies', 'parking', 'waterAvailability',
+          'liftAvailability', 'suitableFor', 'availableFrom', 'shortDescription',
+          'fullDescription', 'additionalNotes', 'facilities', 'images',
+          'submitterName', 'submitterMobile', 'submitterWhatsapp', 'submitterRole',
+          'workflowStatus', 'rejectionReason', 'submittedAt', 'approvedAt',
+          'updatedAt'
+        ])
+        && data.propertyCode is string && data.propertyCode.size() >= 4 && data.propertyCode.size() <= 24 && data.propertyCode.matches('^WB-[0-9]{4,8}$')
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 180
+        && isValidPropertyType(data.propertyType)
+        && data.locality is string && data.locality.size() >= 2 && data.locality.size() <= 180
+        && data.subLocality is string && data.subLocality.size() >= 2 && data.subLocality.size() <= 140
+        && data.localitySlug is string && data.localitySlug.size() >= 2 && data.localitySlug.size() <= 80 && data.localitySlug.matches('^[a-z0-9-]+$')
+        && isOptString(data, 'societyName', 160)
+        && data.publicAreaNote is string && data.publicAreaNote.size() <= 260
+        && data.lat is number && data.lat >= -90 && data.lat <= 90
+        && data.lng is number && data.lng >= -180 && data.lng <= 180
+        && data.monthlyRent is number && data.monthlyRent >= 1000 && data.monthlyRent <= 500000
+        && (!('securityDeposit' in data) || data.securityDeposit == null || (data.securityDeposit is number && data.securityDeposit >= 0 && data.securityDeposit <= 5000000))
+        && data.brokerageStatus is string && data.brokerageStatus.size() <= 40
+        && data.brokerageAmount is number && data.brokerageAmount >= 0 && data.brokerageAmount <= 1000000
+        && isOptString(data, 'maintenanceCharges', 120)
+        && isValidFurnishing(data.furnishing)
+        && isOptString(data, 'carpetArea', 60)
+        && isOptString(data, 'builtUpArea', 60)
+        && isOptString(data, 'floorNumber', 30)
+        && isOptString(data, 'totalFloors', 30)
+        && isOptString(data, 'floorInfo', 80)
+        && isOptString(data, 'facing', 60)
+        && data.bathrooms is number && data.bathrooms >= 1 && data.bathrooms <= 10
+        && data.bathroomType is string && data.bathroomType.size() <= 80
+        && data.balconies is number && data.balconies >= 0 && data.balconies <= 10
+        && data.parking is string && data.parking.size() <= 100
+        && data.waterAvailability is string && data.waterAvailability.size() <= 100
+        && data.liftAvailability is string && data.liftAvailability.size() <= 100
+        && data.suitableFor is string && data.suitableFor.size() <= 80
+        && data.availableFrom is string && data.availableFrom.size() <= 60
+        && data.shortDescription is string && data.shortDescription.size() <= 400
+        && data.fullDescription is string && data.fullDescription.size() >= 10 && data.fullDescription.size() <= 2600
+        && data.additionalNotes is string && data.additionalNotes.size() <= 500
+        && isValidStringList(data.facilities, 15)
+        && isValidStringList(data.images, 15)
+        && data.submitterName is string && data.submitterName.size() >= 2 && data.submitterName.size() <= 100
+        && data.submitterMobile is string && data.submitterMobile.size() == 10 && data.submitterMobile.matches('^[6-9][0-9]{9}$')
+        && data.submitterWhatsapp is string && data.submitterWhatsapp.size() == 10 && data.submitterWhatsapp.matches('^[6-9][0-9]{9}$')
+        && isValidSubmitterRole(data.submitterRole)
+        && data.workflowStatus in ['Pending', 'Available', 'Rejected', 'Rented']
+        && isOptString(data, 'rejectionReason', 500)
+        && data.submittedAt is timestamp
+        && (!('approvedAt' in data) || data.approvedAt == null || data.approvedAt is timestamp)
+        && data.updatedAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
+    // Validation Blueprint: PropertyPhoto
+    // ---------------------------------------------------------
+    function isValidPhoto(data) {
+      return data.keys().hasAll(['propertyCode', 'filename', 'mimeType', 'dataUrl', 'isPublic', 'createdAt'])
+        && data.keys().hasOnly(['propertyCode', 'filename', 'mimeType', 'dataUrl', 'isPublic', 'createdAt'])
+        && data.propertyCode is string && data.propertyCode.size() >= 4 && data.propertyCode.size() <= 24 && data.propertyCode.matches('^WB-[0-9]{4,8}$')
+        && data.filename is string && data.filename.size() >= 1 && data.filename.size() <= 140
+        && data.mimeType in ['image/jpeg', 'image/png', 'image/webp']
+        && data.dataUrl is string && data.dataUrl.size() >= 30 && data.dataUrl.size() <= 450000
+        && data.isPublic is bool
+        && data.createdAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
+    // Validation Blueprint: AdminNotification
+    // ---------------------------------------------------------
+    function isValidNotification(data) {
+      return data.keys().hasAll(['type', 'propertyCode', 'title', 'message', 'isRead', 'createdAt'])
+        && data.keys().hasOnly(['type', 'propertyCode', 'title', 'message', 'isRead', 'createdAt'])
+        && data.type in ['submission', 'approved', 'rejected', 'rented', 'available', 'deleted']
+        && data.propertyCode is string && data.propertyCode.size() >= 4 && data.propertyCode.size() <= 24 && data.propertyCode.matches('^WB-[0-9]{4,8}$')
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 140
+        && data.message is string && data.message.size() >= 5 && data.message.size() <= 400
+        && data.isRead is bool
+        && data.createdAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
+    // Validation Blueprint: AppMetadata
+    // ---------------------------------------------------------
+    function isValidAppMeta(data) {
+      return data.keys().hasAll(['seeded', 'seededAt'])
+        && data.keys().hasOnly(['seeded', 'seededAt'])
+        && data.seeded is bool
+        && data.seededAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
+    // Collection: /public_properties/{propertyId}
+    // Public read (approved Available/Rented only); Sole Admin write only
+    // ---------------------------------------------------------
+    match /public_properties/{propertyId} {
+      allow get: if isValidId(propertyId)
+        && existing().workflowStatus in ['Available', 'Rented'];
+      allow list: if existing().workflowStatus in ['Available', 'Rented'];
+      allow create: if isSoleAdmin()
+        && isValidId(propertyId)
+        && isValidPublicProperty(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isSoleAdmin()
+        && isValidId(propertyId)
+        && isValidPublicProperty(incoming())
+        && incoming().propertyCode == existing().propertyCode
+        && incoming().submittedAt == existing().submittedAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isSoleAdmin() && isValidId(propertyId);
+    }
+
+    // ---------------------------------------------------------
+    // Collection: /property_submissions/{submissionId}
+    // Public create-only (strictly Pending, zero self-approval); Sole Admin read/update/delete
+    // ---------------------------------------------------------
+    match /property_submissions/{submissionId} {
+      allow get: if isSoleAdmin() && isValidId(submissionId);
+      allow list: if isSoleAdmin();
+      allow create: if isValidId(submissionId)
+        && isValidSubmission(incoming())
+        && incoming().submittedAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isSoleAdmin()
+          || (
+            incoming().workflowStatus == 'Pending'
+            && (!('approvedAt' in incoming()) || incoming().approvedAt == null)
+            && (!('rejectionReason' in incoming()) || incoming().rejectionReason == null)
+          )
+        );
+      allow update: if isSoleAdmin()
+        && isValidId(submissionId)
+        && isValidSubmission(incoming())
+        && incoming().propertyCode == existing().propertyCode
+        && incoming().submittedAt == existing().submittedAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isSoleAdmin() && isValidId(submissionId);
+    }
+
+    // ---------------------------------------------------------
+    // Collection: /property_photos/{photoId}
+    // Public create-only (isPublic == false); public get ONLY if isPublic == true; Sole Admin full control
+    // ---------------------------------------------------------
+    match /property_photos/{photoId} {
+      allow get: if isValidId(photoId)
+        && (existing().isPublic == true || isSoleAdmin());
+      allow list: if isSoleAdmin();
+      allow create: if isValidId(photoId)
+        && isValidPhoto(incoming())
+        && incoming().createdAt == request.time
+        && (isSoleAdmin() || incoming().isPublic == false);
+      allow update: if isSoleAdmin()
+        && isValidId(photoId)
+        && isValidPhoto(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['isPublic']);
+      allow delete: if isSoleAdmin() && isValidId(photoId);
+    }
+
+    // ---------------------------------------------------------
+    // Collection: /admin_notifications/{notificationId}
+    // Public create-only for unread submission alerts; Sole Admin read/update/delete
+    // ---------------------------------------------------------
+    match /admin_notifications/{notificationId} {
+      allow get: if isSoleAdmin() && isValidId(notificationId);
+      allow list: if isSoleAdmin();
+      allow create: if isValidId(notificationId)
+        && isValidNotification(incoming())
+        && incoming().createdAt == request.time
+        && (
+          isSoleAdmin()
+          || (incoming().type == 'submission' && incoming().isRead == false)
+        );
+      allow update: if isSoleAdmin()
+        && isValidId(notificationId)
+        && isValidNotification(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isSoleAdmin() && isValidId(notificationId);
+    }
+
+    // ---------------------------------------------------------
+    // Collection: /app_meta/{metaId}
+    // Public read; Sole Admin write
+    // ---------------------------------------------------------
+    match /app_meta/{metaId} {
+      allow get: if isValidId(metaId);
+      allow create, update: if isSoleAdmin()
+        && isValidId(metaId)
+        && isValidAppMeta(incoming())
+        && incoming().seededAt == request.time;
+      allow delete: if isSoleAdmin() && isValidId(metaId);
+    }
+  }
+}

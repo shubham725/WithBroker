@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { auth, googleAuthProvider } from '../lib/firebase';
+import { auth, googleAuthProvider, isSoleAdminEmail } from '../lib/firebase';
 
 export interface AdminProfile {
   uid: string;
@@ -29,7 +29,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const verifyAdminSession = useCallback(async (firebaseUser: User | null) => {
+  const evaluateAdminSession = useCallback((firebaseUser: User | null) => {
     if (!firebaseUser) {
       setAdminProfile(null);
       setIsAdmin(false);
@@ -37,48 +37,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    try {
-      const token = await firebaseUser.getIdToken();
-      const res = await fetch('/api/admin/me', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    const emailVerified = firebaseUser.emailVerified !== false;
+    const authorized = emailVerified && isSoleAdminEmail(firebaseUser.email);
 
-      if (res.ok) {
-        const data = await res.json();
-        setAdminProfile(data.user ?? null);
-        setIsAdmin(data.user?.role === 'admin');
-        setAuthError(null);
-      } else if (res.status === 403) {
-        setAdminProfile({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email ?? '',
-          displayName: firebaseUser.displayName ?? null,
-          role: 'user',
-        });
-        setIsAdmin(false);
-        setAuthError(null);
-      } else {
-        setAdminProfile(null);
-        setIsAdmin(false);
-      }
-    } catch {
-      setAdminProfile(null);
-      setIsAdmin(false);
-    } finally {
-      setAuthLoading(false);
-    }
+    setAdminProfile({
+      uid: firebaseUser.uid,
+      email: firebaseUser.email ?? '',
+      displayName: firebaseUser.displayName ?? null,
+      role: authorized ? 'admin' : 'user',
+    });
+    setIsAdmin(authorized);
+    setAuthError(null);
+    setAuthLoading(false);
   }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
-      setAuthLoading(true);
-      void verifyAdminSession(firebaseUser);
+      evaluateAdminSession(firebaseUser);
     });
     return () => unsubscribe();
-  }, [verifyAdminSession]);
+  }, [evaluateAdminSession]);
 
   const signInWithGoogle = useCallback(async () => {
     setAuthError(null);
@@ -86,15 +65,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const result = await signInWithPopup(auth, googleAuthProvider);
       setUser(result.user);
-      await verifyAdminSession(result.user);
+      evaluateAdminSession(result.user);
     } catch (error: unknown) {
       const errCode = (error as { code?: string })?.code;
-      if (errCode !== 'auth/popup-closed-by-user') {
+      if (errCode === 'auth/unauthorized-domain') {
+        setAuthError(
+          'This domain is not yet authorized in Firebase Auth. Add this domain under Firebase Console → Authentication → Settings → Authorized domains.'
+        );
+      } else if (errCode !== 'auth/popup-closed-by-user') {
         setAuthError('Unable to complete Google Sign-In. Please allow popups and try again.');
       }
       setAuthLoading(false);
     }
-  }, [verifyAdminSession]);
+  }, [evaluateAdminSession]);
 
   const logout = useCallback(async () => {
     setAuthError(null);
