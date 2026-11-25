@@ -39,6 +39,14 @@ function isAdminHash(): boolean {
   );
 }
 
+function isAddPropertyRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.location.hash === '#add-property' ||
+    window.location.pathname === '/add-property'
+  );
+}
+
 function WithBrokerAppContent() {
   const [view, setView] = useState<'public' | 'admin'>(() =>
     isAdminHash() ? 'admin' : 'public'
@@ -50,7 +58,7 @@ function WithBrokerAppContent() {
   const [filters, setFilters] = useState<SearchFiltersState>(INITIAL_FILTERS);
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
   const [shareProperty, setShareProperty] = useState<PropertyListing | null>(null);
-  const [postModalOpen, setPostModalOpen] = useState(false);
+  const [postModalOpen, setPostModalOpen] = useState(() => isAddPropertyRoute());
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [mapsQuotaExceeded, setMapsQuotaExceeded] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>(() => {
@@ -97,10 +105,13 @@ function WithBrokerAppContent() {
     void fetchPublicListings();
   }, [fetchPublicListings]);
 
-  // Sync SPA admin route with hash/popstate
+  // Sync SPA admin & add-property routes with hash/popstate
   useEffect(() => {
     const syncRoute = () => {
       setView(isAdminHash() ? 'admin' : 'public');
+      if (isAddPropertyRoute()) {
+        setPostModalOpen(true);
+      }
     };
     window.addEventListener('hashchange', syncRoute);
     window.addEventListener('popstate', syncRoute);
@@ -159,6 +170,11 @@ function WithBrokerAppContent() {
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  const handleHeroSearchSubmit = () => {
+    setFilters((prev) => ({ ...prev, onlyAvailable: true }));
+    scrollToFlats();
   };
 
   const handleSelectArea = (slug: string) => {
@@ -232,7 +248,7 @@ function WithBrokerAppContent() {
         <HeroSection
           filters={filters}
           onFilterChange={setFilters}
-          onSearchSubmit={scrollToFlats}
+          onSearchSubmit={handleHeroSearchSubmit}
           onOpenPostModal={() => setPostModalOpen(true)}
         />
 

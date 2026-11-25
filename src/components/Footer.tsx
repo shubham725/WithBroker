@@ -100,7 +100,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={onOpenPostModal}
                   className="text-left transition-colors hover:text-white"
                 >
-                  List Your Property
+                  Add Your Property Free
                 </button>
               </li>
               <li>
