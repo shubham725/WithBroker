@@ -27,6 +27,7 @@ import type {
   SuitableFor,
   WorkflowStatus,
 } from '../types/property';
+import { generateAutoPropertyDescription } from '../utils/propertyLogic';
 import { OperationType, db, handleFirestoreError } from './firebase';
 
 const PUBLIC_COLLECTION = 'public_properties';
@@ -540,27 +541,49 @@ export async function submitPublicProperty(
         ? `Floor ${input.floorNumber.trim()}`
         : null;
 
-  // Compress and save uploaded photos to /property_photos (isPublic: false while Pending)
-  const photoRefs: string[] = [];
+  // Compress uploaded photos in parallel for fast mobile submissions, then save to /property_photos (isPublic: false while Pending)
   const filesToUpload = photoFiles.slice(0, 8);
-  for (const file of filesToUpload) {
-    const compressed = await compressImageFileToDataUrl(file);
-    const photoId = generateDocId('photo');
-    try {
-      await setDoc(doc(db, PHOTOS_COLLECTION, photoId), {
-        propertyCode,
-        filename: compressed.filename,
-        mimeType: compressed.mimeType,
-        dataUrl: compressed.dataUrl,
-        isPublic: false,
-        createdAt: serverTimestamp(),
-      });
-      photoDataUrlCache.set(photoId, compressed.dataUrl);
-      photoRefs.push(`${PHOTO_PREFIX}${photoId}`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `${PHOTOS_COLLECTION}/${photoId}`);
-    }
-  }
+  const compressedList = await Promise.all(
+    filesToUpload.map((file) => compressImageFileToDataUrl(file))
+  );
+  const photoRefs: string[] = [];
+  await Promise.all(
+    compressedList.map(async (compressed) => {
+      const photoId = generateDocId('photo');
+      try {
+        await setDoc(doc(db, PHOTOS_COLLECTION, photoId), {
+          propertyCode,
+          filename: compressed.filename,
+          mimeType: compressed.mimeType,
+          dataUrl: compressed.dataUrl,
+          isPublic: false,
+          createdAt: serverTimestamp(),
+        });
+        photoDataUrlCache.set(photoId, compressed.dataUrl);
+        photoRefs.push(`${PHOTO_PREFIX}${photoId}`);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, `${PHOTOS_COLLECTION}/${photoId}`);
+      }
+    })
+  );
+
+  const hasExactCoords =
+    typeof input.lat === 'number' &&
+    typeof input.lng === 'number' &&
+    Number.isFinite(input.lat) &&
+    Number.isFinite(input.lng) &&
+    input.lat >= -90 &&
+    input.lat <= 90 &&
+    input.lng >= -180 &&
+    input.lng <= 180;
+
+  const resolvedLat = hasExactCoords ? (input.lat as number) : area.lat;
+  const resolvedLng = hasExactCoords ? (input.lng as number) : area.lng;
+
+  const finalDescription =
+    input.description.trim().length >= 10
+      ? input.description.trim()
+      : generateAutoPropertyDescription(input);
 
   const submissionPayload = {
     propertyCode,
@@ -571,8 +594,8 @@ export async function submitPublicProperty(
     localitySlug: area.slug,
     societyName: input.societyName.trim() ? input.societyName.trim().slice(0, 160) : null,
     publicAreaNote: `${input.location.trim().slice(0, 160)} (exact address shared upon inquiry)`,
-    lat: area.lat,
-    lng: area.lng,
+    lat: resolvedLat,
+    lng: resolvedLng,
     monthlyRent,
     securityDeposit,
     brokerageStatus: brokerageAmount > 0 ? 'Applicable' : 'No Brokerage',
@@ -599,8 +622,8 @@ export async function submitPublicProperty(
       : 'Ask on inquiry',
     suitableFor: 'Family / Bachelors',
     availableFrom: (input.availableFrom.trim() || 'Immediate').slice(0, 60),
-    shortDescription: input.description.trim().slice(0, 220),
-    fullDescription: input.description.trim().slice(0, 2500),
+    shortDescription: finalDescription.slice(0, 220),
+    fullDescription: finalDescription.slice(0, 2500),
     additionalNotes:
       brokerageAmount > 0
         ? `Brokerage ₹${brokerageAmount.toLocaleString('en-IN')}.`

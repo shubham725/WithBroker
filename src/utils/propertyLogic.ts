@@ -336,11 +336,71 @@ export function validateSubmissionForm(
     }
   }
 
-  if (!input.description.trim() || input.description.trim().length < 15) {
-    errors.description = 'Please enter a short description (at least 15 characters).';
+  if (input.description.trim().length > 2500) {
+    errors.description = 'Description must be under 2,500 characters.';
   }
 
   return errors;
+}
+
+/**
+ * Automatically builds a clear, natural rental flat description from the form inputs
+ * so owners & brokers never have to type a description manually.
+ */
+export function generateAutoPropertyDescription(
+  input: PropertySubmissionInput
+): string {
+  const typeLabel = input.propertyType || 'Rental Flat';
+  const furnishingLabel = input.furnishingStatus || 'Unfurnished';
+  const locationLabel = input.location.trim() || 'Pune';
+  const societyPart = input.societyName.trim() ? ` at ${input.societyName.trim()}` : '';
+
+  const rentNum = Number(input.monthlyRent);
+  const depositNum = Number(input.securityDeposit);
+  const brokerageNum = Number(input.brokerageAmount || '0');
+
+  const rentText =
+    Number.isFinite(rentNum) && rentNum >= 1000
+      ? `Monthly rent is ${formatINR(Math.round(rentNum))}`
+      : 'Affordable monthly rent';
+  const depositText =
+    input.securityDeposit.trim() !== '' && Number.isFinite(depositNum) && depositNum >= 0
+      ? ` with ${formatINR(Math.round(depositNum))} security deposit`
+      : '';
+  const brokerageText =
+    Number.isFinite(brokerageNum) && brokerageNum > 0
+      ? ` and brokerage of ${formatINR(Math.round(brokerageNum))}.`
+      : ' with No Brokerage.';
+
+  const specParts: string[] = [];
+  const bathNum = Number(input.bathrooms);
+  if (Number.isFinite(bathNum) && bathNum >= 1) {
+    specParts.push(`${Math.round(bathNum)} bathroom${Math.round(bathNum) > 1 ? 's' : ''}`);
+  }
+  const balcNum = Number(input.balconies);
+  if (Number.isFinite(balcNum) && balcNum > 0) {
+    specParts.push(`${Math.round(balcNum)} balcon${Math.round(balcNum) > 1 ? 'ies' : 'y'}`);
+  }
+  if (input.carpetArea.trim()) {
+    specParts.push(`${input.carpetArea.trim()} carpet area`);
+  }
+  if (input.floorNumber.trim() && input.totalFloors.trim()) {
+    specParts.push(`floor ${input.floorNumber.trim()} of ${input.totalFloors.trim()}`);
+  } else if (input.floorNumber.trim()) {
+    specParts.push(`floor ${input.floorNumber.trim()}`);
+  }
+
+  const specsSentence =
+    specParts.length > 0 ? ` Includes ${specParts.join(', ')}.` : '';
+  const facilitiesSentence =
+    input.facilities.length > 0
+      ? ` Key facilities: ${input.facilities.slice(0, 6).join(', ')}.`
+      : '';
+  const availSentence = input.availableFrom.trim()
+    ? ` Available from ${input.availableFrom.trim()}.`
+    : ' Available immediately.';
+
+  return `Well-maintained ${furnishingLabel} ${typeLabel} flat for rent${societyPart} in ${locationLabel}. ${rentText}${depositText}${brokerageText}${specsSentence}${facilitiesSentence}${availSentence}`.trim();
 }
 
 export function buildPropertySubmissionWhatsAppUrl(

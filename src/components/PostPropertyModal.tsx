@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ImagePlus,
   Loader2,
+  Lock,
   Send,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
+import { WHATSAPP_NUMBER_DISPLAY } from '../data/properties';
+import { submitPublicProperty } from '../lib/firestoreRepo';
 import {
   FurnishingStatus,
   PropertySubmissionInput,
@@ -16,9 +22,10 @@ import {
 } from '../types/property';
 import {
   buildPropertySubmissionWhatsAppUrl,
+  generateAutoPropertyDescription,
   validateSubmissionForm,
 } from '../utils/propertyLogic';
-import { submitPublicProperty } from '../lib/firestoreRepo';
+import { LocationPickerField } from './LocationPickerField';
 import { WhatsAppIcon } from './WhatsAppButton';
 
 interface PostPropertyModalProps {
@@ -26,6 +33,14 @@ interface PostPropertyModalProps {
   onClose: () => void;
   onSubmitted?: () => void;
 }
+
+const PROPERTY_TYPES: PropertyType[] = ['1RK', '1BHK', '2BHK', '3BHK'];
+
+const FURNISHING_TYPES: FurnishingStatus[] = [
+  'Unfurnished',
+  'Semi-Furnished',
+  'Fully Furnished',
+];
 
 const FACILITY_CHOICES = [
   '24 Hours Water',
@@ -45,8 +60,11 @@ const INITIAL_FORM_STATE: PropertySubmissionInput = {
   mobile: '',
   whatsapp: '',
   submitterRole: 'Owner',
-  propertyType: '',
+  propertyType: '1BHK',
   location: '',
+  lat: null,
+  lng: null,
+  locationSource: 'manual',
   societyName: '',
   monthlyRent: '',
   securityDeposit: '',
@@ -83,11 +101,35 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
 }) => {
   const [form, setForm] = useState<PropertySubmissionInput>(INITIAL_FORM_STATE);
   const [sameAsMobile, setSameAsMobile] = useState(true);
+  const [descriptionEdited, setDescriptionEdited] = useState(false);
+  const [showMoreSpecs, setShowMoreSpecs] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<SelectedPhotoItem[]>([]);
   const [errors, setErrors] = useState<SubmissionValidationErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successInfo, setSuccessInfo] = useState<SubmissionSuccess | null>(null);
+
+  const autoDescription = useMemo(
+    () => generateAutoPropertyDescription(form),
+    [
+      form.propertyType,
+      form.furnishingStatus,
+      form.location,
+      form.societyName,
+      form.monthlyRent,
+      form.securityDeposit,
+      form.brokerageAmount,
+      form.bathrooms,
+      form.balconies,
+      form.floorNumber,
+      form.totalFloors,
+      form.carpetArea,
+      form.availableFrom,
+      form.facilities,
+    ]
+  );
+
+  const displayedDescription = descriptionEdited ? form.description : autoDescription;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -202,9 +244,15 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
     e.preventDefault();
     setServerError(null);
 
+    const finalDesc =
+      descriptionEdited && form.description.trim().length >= 10
+        ? form.description.trim()
+        : autoDescription;
+
     const normalizedInput: PropertySubmissionInput = {
       ...form,
       whatsapp: sameAsMobile ? form.mobile : form.whatsapp,
+      description: finalDesc,
     };
 
     const validationErrors = validateSubmissionForm(normalizedInput);
@@ -234,7 +282,9 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
       if (msg.includes('Please wait')) {
         setServerError(msg);
       } else {
-        setServerError('Could not save your submission right now. Please check all fields and try again.');
+        setServerError(
+          'Could not save your submission right now. Please check all required fields and try again.'
+        );
       }
     } finally {
       setSubmitting(false);
@@ -245,6 +295,8 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
     clearPhotos();
     setForm(INITIAL_FORM_STATE);
     setSameAsMobile(true);
+    setDescriptionEdited(false);
+    setShowMoreSpecs(false);
     setErrors({});
     setServerError(null);
     setSuccessInfo(null);
@@ -255,24 +307,26 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="post-property-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#090A14]/65 p-3 sm:p-5 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[#090A14]/65 sm:items-center sm:p-5 backdrop-blur-xs"
       onClick={() => {
         if (!submitting) onClose();
       }}
     >
       <div
-        className="relative flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[94vh] sm:max-w-3xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-[#090A14]/8 px-5 py-4 sm:px-6">
-          <div>
-            <p className="text-xs font-semibold text-[#6B1CD4]">Free Public Submission · Owners &amp; Brokers</p>
+        {/* Sticky Modal Header */}
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#090A14]/8 bg-white px-4 py-3.5 sm:px-6 sm:py-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-[#6B1CD4] sm:text-xs">
+              Fast Free Listing · Owners &amp; Brokers · No Login Needed
+            </p>
             <h2
               id="post-property-modal-title"
-              className="font-display text-lg font-bold text-[#090A14] sm:text-xl"
+              className="truncate font-display text-base font-bold text-[#090A14] sm:text-xl"
             >
-              Add Your Property Free on WithBroker
+              Add Your Property Free
             </h2>
           </div>
 
@@ -287,13 +341,13 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="overflow-y-auto bg-[#F9F8FC] p-5 sm:p-6">
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto overscroll-contain bg-[#F9F8FC] p-3.5 sm:p-6">
           {successInfo ? (
             <div
               data-testid="submission-confirmation"
               role="status"
-              className="rounded-2xl border border-[#16A34A]/25 bg-white p-6 shadow-xs"
+              className="rounded-2xl border border-[#16A34A]/25 bg-white p-5 sm:p-6 shadow-xs"
             >
               <div className="flex items-start gap-3.5">
                 <CheckCircle2
@@ -325,12 +379,12 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     </p>
                   )}
 
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
                     <a
                       href={successInfo.whatsAppUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-xl bg-[#16A34A] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#15803D]"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#16A34A] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#15803D]"
                     >
                       <WhatsAppIcon className="h-4 w-4 text-white" />
                       <span>Notify Team on WhatsApp</span>
@@ -338,14 +392,14 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     <button
                       type="button"
                       onClick={handleResetSubmission}
-                      className="rounded-xl border border-[#090A14]/15 bg-white px-4 py-3 text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                      className="h-11 rounded-xl border border-[#090A14]/15 bg-white px-4 text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
                     >
                       Submit Another Property
                     </button>
                     <button
                       type="button"
                       onClick={onClose}
-                      className="rounded-xl px-4 py-3 text-sm font-semibold text-[#656275] hover:text-[#090A14]"
+                      className="h-11 rounded-xl px-4 text-sm font-semibold text-[#656275] hover:text-[#090A14]"
                     >
                       Close
                     </button>
@@ -354,7 +408,12 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} noValidate className="space-y-5">
+            <form
+              id="post-property-form"
+              onSubmit={handleSubmit}
+              noValidate
+              className="space-y-4 pb-4"
+            >
               {serverError && (
                 <div
                   role="alert"
@@ -367,36 +426,22 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
 
               {/* Section 1: Owner / Broker Details */}
               <div className="rounded-2xl border border-[#090A14]/8 bg-white p-4 sm:p-5">
-                <h3 className="font-display text-sm font-bold text-[#090A14]">
-                  1. Owner / Broker Details
-                </h3>
-                <p className="mt-0.5 text-xs text-[#656275]">
-                  Your personal contact details stay private and are visible only to the WithBroker admin team.
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-display text-sm font-bold text-[#090A14]">
+                    1. Your Contact Details
+                  </h3>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-[#F5EFFD] px-2 py-0.5 text-[11px] font-semibold text-[#6B1CD4]">
+                    <Lock className="h-3 w-3" aria-hidden="true" />
+                    Admin Only
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-[#656275] sm:text-xs">
+                  Your number is shown <strong className="text-[#090A14]">only in the Admin Panel</strong>. Public tenants always contact WithBroker ({WHATSAPP_NUMBER_DISPLAY}).
                 </p>
 
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="mt-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="sub-name" className="block text-xs font-semibold text-[#090A14]">
-                      Full Name *
-                    </label>
-                    <input
-                      id="sub-name"
-                      type="text"
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      placeholder="e.g. Amit Deshmukh"
-                      aria-invalid={Boolean(errors.name)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                    />
-                    {errors.name && (
-                      <p role="alert" className="mt-1 text-xs font-medium text-red-600">
-                        {errors.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <span className="block text-xs font-semibold text-[#090A14]">User Type *</span>
+                    <span className="block text-xs font-semibold text-[#090A14]">Listing By *</span>
                     <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] p-1">
                       {(['Owner', 'Broker'] as const).map((role) => (
                         <button
@@ -417,6 +462,27 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </div>
 
                   <div>
+                    <label htmlFor="sub-name" className="block text-xs font-semibold text-[#090A14]">
+                      Full Name *
+                    </label>
+                    <input
+                      id="sub-name"
+                      type="text"
+                      autoComplete="name"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="e.g. Amit Deshmukh"
+                      aria-invalid={Boolean(errors.name)}
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                    />
+                    {errors.name && (
+                      <p role="alert" className="mt-1 text-xs font-medium text-red-600">
+                        {errors.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
                     <label htmlFor="sub-mobile" className="block text-xs font-semibold text-[#090A14]">
                       Mobile Number *
                     </label>
@@ -424,9 +490,10 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       id="sub-mobile"
                       type="tel"
                       inputMode="numeric"
+                      autoComplete="tel"
                       value={form.mobile}
                       onChange={(e) => handleMobileChange(e.target.value)}
-                      placeholder="e.g. 9823012345"
+                      placeholder="10-digit mobile number"
                       aria-invalid={Boolean(errors.mobile)}
                       className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
                     />
@@ -445,7 +512,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       >
                         WhatsApp Number *
                       </label>
-                      <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-[#6B1CD4]">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-[#6B1CD4]">
                         <input
                           type="checkbox"
                           checked={sameAsMobile}
@@ -462,7 +529,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       disabled={sameAsMobile}
                       value={sameAsMobile ? form.mobile : form.whatsapp}
                       onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                      placeholder="e.g. 9823012345"
+                      placeholder="10-digit WhatsApp number"
                       aria-invalid={Boolean(errors.whatsapp)}
                       className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none disabled:opacity-65"
                     />
@@ -475,32 +542,42 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 </div>
               </div>
 
-              {/* Section 2: Property Details */}
+              {/* Section 2: Quick Flat Info + Google/Live GPS Location */}
               <div className="rounded-2xl border border-[#090A14]/8 bg-white p-4 sm:p-5 space-y-4">
                 <h3 className="font-display text-sm font-bold text-[#090A14]">
-                  2. Property Specifications &amp; Rental Terms
+                  2. Flat Details &amp; Google Location
                 </h3>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {/* Fast Tap Chips for Type & Furnishing */}
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="sub-type" className="block text-xs font-semibold text-[#090A14]">
+                    <span className="block text-xs font-semibold text-[#090A14]">
                       Property Type *
-                    </label>
-                    <select
-                      id="sub-type"
-                      value={form.propertyType}
-                      onChange={(e) =>
-                        setForm({ ...form, propertyType: e.target.value as PropertyType | '' })
-                      }
-                      aria-invalid={Boolean(errors.propertyType)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                    </span>
+                    <div
+                      role="group"
+                      aria-label="Property type"
+                      className="mt-1.5 grid grid-cols-4 gap-1.5"
                     >
-                      <option value="">Select Type</option>
-                      <option value="1RK">1RK</option>
-                      <option value="1BHK">1BHK</option>
-                      <option value="2BHK">2BHK</option>
-                      <option value="3BHK">3BHK</option>
-                    </select>
+                      {PROPERTY_TYPES.map((type) => {
+                        const selected = form.propertyType === type;
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => setForm({ ...form, propertyType: type })}
+                            className={`h-11 rounded-xl border text-xs font-bold transition-colors ${
+                              selected
+                                ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white shadow-2xs'
+                                : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#6B1CD4]'
+                            }`}
+                          >
+                            {type}
+                          </button>
+                        );
+                      })}
+                    </div>
                     {errors.propertyType && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
                         {errors.propertyType}
@@ -509,27 +586,79 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </div>
 
                   <div>
+                    <span className="block text-xs font-semibold text-[#090A14]">Furnishing *</span>
+                    <div
+                      role="group"
+                      aria-label="Furnishing status"
+                      className="mt-1.5 grid grid-cols-3 gap-1.5"
+                    >
+                      {FURNISHING_TYPES.map((status) => {
+                        const selected = form.furnishingStatus === status;
+                        const shortLabel =
+                          status === 'Fully Furnished'
+                            ? 'Furnished'
+                            : status === 'Semi-Furnished'
+                              ? 'Semi'
+                              : 'Unfurnished';
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => setForm({ ...form, furnishingStatus: status })}
+                            className={`h-11 rounded-xl border px-1 text-xs font-semibold transition-colors ${
+                              selected
+                                ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white shadow-2xs'
+                                : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#6B1CD4]'
+                            }`}
+                          >
+                            {shortLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live GPS + Google Maps Search + Interactive Pin + Manual Location */}
+                <LocationPickerField
+                  location={form.location}
+                  lat={form.lat}
+                  lng={form.lng}
+                  locationSource={form.locationSource}
+                  error={errors.location}
+                  onChange={(nextLoc) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      location: nextLoc.location,
+                      lat: nextLoc.lat,
+                      lng: nextLoc.lng,
+                      locationSource: nextLoc.locationSource,
+                      societyName:
+                        !prev.societyName.trim() && nextLoc.societyHint
+                          ? nextLoc.societyHint
+                          : prev.societyName,
+                    }))
+                  }
+                />
+
+                {/* Society / Building + Available From */}
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                  <div>
                     <label
-                      htmlFor="sub-furnishing"
+                      htmlFor="sub-society"
                       className="block text-xs font-semibold text-[#090A14]"
                     >
-                      Furnishing *
+                      Society / Building Name
                     </label>
-                    <select
-                      id="sub-furnishing"
-                      value={form.furnishingStatus}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          furnishingStatus: e.target.value as FurnishingStatus,
-                        })
-                      }
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                    >
-                      <option value="Unfurnished">Unfurnished</option>
-                      <option value="Semi-Furnished">Semi-Furnished</option>
-                      <option value="Fully Furnished">Fully Furnished</option>
-                    </select>
+                    <input
+                      id="sub-society"
+                      type="text"
+                      value={form.societyName}
+                      onChange={(e) => setForm({ ...form, societyName: e.target.value })}
+                      placeholder="e.g. Arihant Niwara, Kamal Nagar"
+                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                    />
                   </div>
 
                   <div>
@@ -555,59 +684,8 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="sub-location"
-                      className="block text-xs font-semibold text-[#090A14]"
-                    >
-                      Property Location (Locality) *
-                    </label>
-                    <input
-                      id="sub-location"
-                      type="text"
-                      list="pune-locality-suggestions"
-                      value={form.location}
-                      onChange={(e) => setForm({ ...form, location: e.target.value })}
-                      placeholder="e.g. Viman Nagar, Pune"
-                      aria-invalid={Boolean(errors.location)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                    />
-                    <datalist id="pune-locality-suggestions">
-                      <option value="Viman Nagar, Pune" />
-                      <option value="Wadgaon Sheri, Pune" />
-                      <option value="Somnath Nagar, Wadgaon Sheri, Pune" />
-                      <option value="Keshav Nagar, Mundhwa, Pune" />
-                      <option value="Chandan Nagar, Pune" />
-                      <option value="Kharadi Bypass, Pune" />
-                      <option value="Wanowrie, Pune" />
-                    </datalist>
-                    {errors.location && (
-                      <p role="alert" className="mt-1 text-xs font-medium text-red-600">
-                        {errors.location}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="sub-society"
-                      className="block text-xs font-semibold text-[#090A14]"
-                    >
-                      Society / Building Name
-                    </label>
-                    <input
-                      id="sub-society"
-                      type="text"
-                      value={form.societyName}
-                      onChange={(e) => setForm({ ...form, societyName: e.target.value })}
-                      placeholder="e.g. Arihant Niwara, Kamal Nagar"
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {/* Rent / Deposit / Brokerage */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <div>
                     <label htmlFor="sub-rent" className="block text-xs font-semibold text-[#090A14]">
                       Monthly Rent (₹) *
@@ -615,6 +693,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     <input
                       id="sub-rent"
                       type="number"
+                      inputMode="numeric"
                       min={1000}
                       step={500}
                       value={form.monthlyRent}
@@ -635,11 +714,12 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       htmlFor="sub-deposit"
                       className="block text-xs font-semibold text-[#090A14]"
                     >
-                      Security Deposit (₹) *
+                      Deposit (₹) *
                     </label>
                     <input
                       id="sub-deposit"
                       type="number"
+                      inputMode="numeric"
                       min={0}
                       step={1000}
                       value={form.securityDeposit}
@@ -655,16 +735,26 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     )}
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="sub-brokerage"
-                      className="block text-xs font-semibold text-[#090A14]"
-                    >
-                      Brokerage Amount (₹)
-                    </label>
+                  <div className="col-span-2 sm:col-span-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <label
+                        htmlFor="sub-brokerage"
+                        className="block text-xs font-semibold text-[#090A14]"
+                      >
+                        Brokerage (₹)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, brokerageAmount: '0' })}
+                        className="text-[11px] font-semibold text-[#6B1CD4] hover:underline"
+                      >
+                        Set ₹0
+                      </button>
+                    </div>
                     <input
                       id="sub-brokerage"
                       type="number"
+                      inputMode="numeric"
                       min={0}
                       step={500}
                       value={form.brokerageAmount}
@@ -681,162 +771,19 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-                  <div>
-                    <label
-                      htmlFor="sub-bathrooms"
-                      className="block text-xs font-semibold text-[#090A14]"
-                    >
-                      Bathrooms *
-                    </label>
-                    <input
-                      id="sub-bathrooms"
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={form.bathrooms}
-                      onChange={(e) => setForm({ ...form, bathrooms: e.target.value })}
-                      className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                    />
-                    {errors.bathrooms && (
-                      <p role="alert" className="mt-1 text-xs font-medium text-red-600">
-                        {errors.bathrooms}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="sub-balconies"
-                      className="block text-xs font-semibold text-[#090A14]"
-                    >
-                      Balconies
-                    </label>
-                    <input
-                      id="sub-balconies"
-                      type="number"
-                      min={0}
-                      max={10}
-                      value={form.balconies}
-                      onChange={(e) => setForm({ ...form, balconies: e.target.value })}
-                      className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="sub-floor"
-                      className="block text-xs font-semibold text-[#090A14]"
-                    >
-                      Floor No.
-                    </label>
-                    <input
-                      id="sub-floor"
-                      type="text"
-                      value={form.floorNumber}
-                      onChange={(e) => setForm({ ...form, floorNumber: e.target.value })}
-                      placeholder="e.g. 2"
-                      className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="sub-total-floors"
-                      className="block text-xs font-semibold text-[#090A14]"
-                    >
-                      Total Floors
-                    </label>
-                    <input
-                      id="sub-total-floors"
-                      type="text"
-                      value={form.totalFloors}
-                      onChange={(e) => setForm({ ...form, totalFloors: e.target.value })}
-                      placeholder="e.g. 5"
-                      className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="col-span-2 sm:col-span-1">
-                    <label
-                      htmlFor="sub-carpet"
-                      className="block text-xs font-semibold text-[#090A14]"
-                    >
-                      Carpet Area
-                    </label>
-                    <input
-                      id="sub-carpet"
-                      type="text"
-                      value={form.carpetArea}
-                      onChange={(e) => setForm({ ...form, carpetArea: e.target.value })}
-                      placeholder="e.g. 620 Sq. Ft."
-                      className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <span className="block text-xs font-semibold text-[#090A14]">
-                    Key Facilities
-                  </span>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {FACILITY_CHOICES.map((facility) => {
-                      const checked = form.facilities.includes(facility);
-                      return (
-                        <button
-                          key={facility}
-                          type="button"
-                          onClick={() => toggleFacility(facility)}
-                          aria-pressed={checked}
-                          className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                            checked
-                              ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white'
-                              : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#6B1CD4]'
-                          }`}
-                        >
-                          {facility}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="sub-description"
-                    className="block text-xs font-semibold text-[#090A14]"
-                  >
-                    Property Description *
-                  </label>
-                  <textarea
-                    id="sub-description"
-                    rows={3}
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    placeholder="Describe rooms, ventilation, nearby landmarks, tenant preferences, maintenance..."
-                    aria-invalid={Boolean(errors.description)}
-                    className="mt-1.5 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] p-3.5 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-                  />
-                  {errors.description && (
-                    <p role="alert" className="mt-1 text-xs font-medium text-red-600">
-                      {errors.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Multi-Photo Upload */}
+                {/* Fast Multi-Photo Upload */}
                 <div>
                   <label htmlFor="sub-photos" className="block text-xs font-semibold text-[#090A14]">
-                    Property Photos (Up to 8 images, JPG/PNG/WebP, max 5 MB each)
+                    Flat Photos (Up to 8 · Tap to pick from camera or gallery)
                   </label>
-                  <div className="mt-1.5 rounded-xl border border-dashed border-[#6B1CD4]/35 bg-[#F9F8FC] p-3.5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="mt-1.5 rounded-xl border border-dashed border-[#6B1CD4]/35 bg-[#F9F8FC] p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
                       <label
                         htmlFor="sub-photos"
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white px-3.5 py-2 text-xs font-semibold text-[#6B1CD4] shadow-2xs ring-1 ring-[#6B1CD4]/20 transition-colors hover:bg-[#F5EFFD]"
+                        className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-xs font-semibold text-[#6B1CD4] shadow-2xs ring-1 ring-[#6B1CD4]/25 transition-colors hover:bg-[#F5EFFD]"
                       >
                         <ImagePlus className="h-4 w-4" aria-hidden="true" />
-                        <span>Upload Flat Photos ({selectedPhotos.length}/8)</span>
+                        <span>Add Photos ({selectedPhotos.length}/8)</span>
                       </label>
                       <input
                         id="sub-photos"
@@ -853,7 +800,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                           className="inline-flex items-center gap-1 text-xs font-medium text-[#656275] hover:text-red-600"
                         >
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                          <span>Remove all</span>
+                          <span>Clear all</span>
                         </button>
                       )}
                     </div>
@@ -865,7 +812,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     )}
 
                     {selectedPhotos.length > 0 && (
-                      <div className="mt-3 grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+                      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
                         {selectedPhotos.map((item, idx) => (
                           <div
                             key={`${item.file.name}-${idx}`}
@@ -892,26 +839,225 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6B1CD4] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#5412AD] disabled:opacity-60"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                    <span>Saving Property &amp; Uploading Photos...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" aria-hidden="true" />
-                    <span>Submit Property for Admin Approval</span>
-                  </>
+              {/* Section 3: Auto-Filled Optional Description + Collapsible Extra Specs */}
+              <div className="rounded-2xl border border-[#090A14]/8 bg-white p-4 sm:p-5 space-y-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-[#6B1CD4]" aria-hidden="true" />
+                    <label
+                      htmlFor="sub-description"
+                      className="text-xs font-bold text-[#090A14]"
+                    >
+                      Property Description{' '}
+                      <span className="font-medium text-[#656275]">
+                        (Optional · Auto-filled from above)
+                      </span>
+                    </label>
+                  </div>
+                  {descriptionEdited && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDescriptionEdited(false);
+                        setForm((prev) => ({ ...prev, description: '' }));
+                      }}
+                      className="text-[11px] font-semibold text-[#6B1CD4] hover:underline"
+                    >
+                      Reset to Auto-Fill
+                    </button>
+                  )}
+                </div>
+
+                <textarea
+                  id="sub-description"
+                  rows={3}
+                  value={displayedDescription}
+                  onChange={(e) => {
+                    setDescriptionEdited(true);
+                    setForm({ ...form, description: e.target.value });
+                  }}
+                  placeholder="Automatically generated from your flat details above — edit only if you want to customize."
+                  aria-invalid={Boolean(errors.description)}
+                  className="w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] p-3 text-xs leading-relaxed text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                />
+                {errors.description && (
+                  <p role="alert" className="text-xs font-medium text-red-600">
+                    {errors.description}
+                  </p>
                 )}
-              </button>
+
+                {/* Collapsible More Specs Accordion (Keeps Mobile Super Fast!) */}
+                <div className="border-t border-[#090A14]/8 pt-3">
+                  <button
+                    type="button"
+                    aria-expanded={showMoreSpecs}
+                    onClick={() => setShowMoreSpecs((prev) => !prev)}
+                    className="flex w-full items-center justify-between rounded-xl bg-[#F9F8FC] px-3.5 py-2.5 text-left text-xs font-semibold text-[#090A14] transition-colors hover:bg-[#F5EFFD] hover:text-[#6B1CD4]"
+                  >
+                    <span>
+                      More Flat Specs &amp; Facilities (Optional: Bathrooms, Floor, Carpet Area)
+                    </span>
+                    {showMoreSpecs ? (
+                      <ChevronUp className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    )}
+                  </button>
+
+                  {showMoreSpecs && (
+                    <div className="mt-3.5 space-y-4">
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                        <div>
+                          <label
+                            htmlFor="sub-bathrooms"
+                            className="block text-xs font-semibold text-[#090A14]"
+                          >
+                            Bathrooms
+                          </label>
+                          <input
+                            id="sub-bathrooms"
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            max={10}
+                            value={form.bathrooms}
+                            onChange={(e) => setForm({ ...form, bathrooms: e.target.value })}
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                          />
+                          {errors.bathrooms && (
+                            <p role="alert" className="mt-1 text-xs font-medium text-red-600">
+                              {errors.bathrooms}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="sub-balconies"
+                            className="block text-xs font-semibold text-[#090A14]"
+                          >
+                            Balconies
+                          </label>
+                          <input
+                            id="sub-balconies"
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            max={10}
+                            value={form.balconies}
+                            onChange={(e) => setForm({ ...form, balconies: e.target.value })}
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="sub-floor"
+                            className="block text-xs font-semibold text-[#090A14]"
+                          >
+                            Floor No.
+                          </label>
+                          <input
+                            id="sub-floor"
+                            type="text"
+                            value={form.floorNumber}
+                            onChange={(e) => setForm({ ...form, floorNumber: e.target.value })}
+                            placeholder="e.g. 2"
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="sub-total-floors"
+                            className="block text-xs font-semibold text-[#090A14]"
+                          >
+                            Total Floors
+                          </label>
+                          <input
+                            id="sub-total-floors"
+                            type="text"
+                            value={form.totalFloors}
+                            onChange={(e) => setForm({ ...form, totalFloors: e.target.value })}
+                            placeholder="e.g. 5"
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="col-span-2 sm:col-span-1">
+                          <label
+                            htmlFor="sub-carpet"
+                            className="block text-xs font-semibold text-[#090A14]"
+                          >
+                            Carpet Area
+                          </label>
+                          <input
+                            id="sub-carpet"
+                            type="text"
+                            value={form.carpetArea}
+                            onChange={(e) => setForm({ ...form, carpetArea: e.target.value })}
+                            placeholder="e.g. 620 Sq. Ft."
+                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-sm text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="block text-xs font-semibold text-[#090A14]">
+                          Key Facilities
+                        </span>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {FACILITY_CHOICES.map((facility) => {
+                            const checked = form.facilities.includes(facility);
+                            return (
+                              <button
+                                key={facility}
+                                type="button"
+                                onClick={() => toggleFacility(facility)}
+                                aria-pressed={checked}
+                                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                                  checked
+                                    ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white'
+                                    : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#6B1CD4]'
+                                }`}
+                              >
+                                {facility}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </form>
           )}
         </div>
+
+        {/* Sticky Bottom Action Bar (Always 1 Thumb-Tap Away on Mobile!) */}
+        {!successInfo && (
+          <div className="shrink-0 border-t border-[#090A14]/8 bg-white px-4 py-3 sm:px-6 sm:py-4">
+            <button
+              type="submit"
+              form="post-property-form"
+              disabled={submitting}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6B1CD4] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#5412AD] disabled:opacity-60"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <span>Submitting Property...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" aria-hidden="true" />
+                  <span>Submit Property Free for Approval</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

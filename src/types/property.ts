@@ -131,6 +131,9 @@ export interface PropertySubmissionInput {
   submitterRole: SubmitterRole;
   propertyType: PropertyType | '';
   location: string;
+  lat?: number | null;
+  lng?: number | null;
+  locationSource?: 'gps' | 'google' | 'manual';
   societyName: string;
   monthlyRent: string;
   securityDeposit: string;

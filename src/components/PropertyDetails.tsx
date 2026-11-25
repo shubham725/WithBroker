@@ -10,9 +10,11 @@ import {
   ChevronRight,
   Compass,
   Droplets,
+  ExternalLink,
   Layers,
   MapPin,
   Maximize2,
+  Navigation,
   Share2,
   Sofa,
   Users,
@@ -410,9 +412,21 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
               </div>
 
               <div>
-                <h4 className="mb-2.5 text-xs font-semibold text-[#656275]">
-                  Approximate Locality Pin ({property.subLocality})
-                </h4>
+                <div className="mb-2.5 flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-semibold text-[#656275]">
+                    Flat Location Pin ({property.subLocality})
+                  </h4>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${property.coordinates.lat},${property.coordinates.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#6B1CD4] hover:underline"
+                  >
+                    <Navigation className="h-3 w-3" aria-hidden="true" />
+                    <span>Open in Google Maps</span>
+                    <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                  </a>
+                </div>
                 <PuneListingsMap
                   properties={[property]}
                   focusedProperty={property}

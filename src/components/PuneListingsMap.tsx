@@ -11,13 +11,14 @@ import {
   useApiLoadingStatus,
   useMap,
 } from '@vis.gl/react-google-maps';
-import { ExternalLink, MapPin } from 'lucide-react';
+import { Crosshair, ExternalLink, MapPin, Navigation } from 'lucide-react';
 import { PropertyListing } from '../types/property';
 import { formatINR, isPropertyRentedOut } from '../utils/propertyLogic';
 
 interface PuneListingsMapProps {
   properties: PropertyListing[];
   focusedProperty?: PropertyListing | null;
+  activeAreaName?: string | null;
   onSelectProperty?: (property: PropertyListing) => void;
   heightClass?: string;
 }
@@ -91,9 +92,44 @@ const PropertyMarkerItem: React.FC<PropertyMarkerItemProps> = ({
   );
 };
 
+const MapNearMeControl: React.FC = () => {
+  const map = useMap();
+  const [locating, setLocating] = useState(false);
+
+  const handleNearMe = () => {
+    if (!map || typeof navigator === 'undefined' || !navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        map.setZoom(14);
+        setLocating(false);
+      },
+      () => {
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleNearMe}
+      disabled={locating}
+      title="Center map on your live location"
+      className="absolute right-3 bottom-6 z-10 inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#090A14]/15 bg-white/95 px-3 text-xs font-semibold text-[#090A14] shadow-md backdrop-blur-xs transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4] disabled:opacity-60"
+    >
+      <Crosshair className={`h-3.5 w-3.5 text-[#6B1CD4] ${locating ? 'animate-spin' : ''}`} aria-hidden="true" />
+      <span>{locating ? 'Locating...' : 'Near Me'}</span>
+    </button>
+  );
+};
+
 interface MapCanvasProps {
   properties: PropertyListing[];
   focusedProperty?: PropertyListing | null;
+  activeAreaName?: string | null;
   onSelectProperty?: (property: PropertyListing) => void;
   heightClass: string;
 }
@@ -101,6 +137,7 @@ interface MapCanvasProps {
 const MapCanvas: React.FC<MapCanvasProps> = ({
   properties,
   focusedProperty,
+  activeAreaName,
   onSelectProperty,
   heightClass,
 }) => {
@@ -124,6 +161,7 @@ const MapCanvas: React.FC<MapCanvasProps> = ({
       <MapDirectoryFallback
         properties={properties}
         focusedProperty={focusedProperty}
+        activeAreaName={activeAreaName}
         onSelectProperty={onSelectProperty}
         heightClass={heightClass}
         reason="Interactive map tiles could not load in this environment."
@@ -136,6 +174,17 @@ const MapCanvas: React.FC<MapCanvasProps> = ({
 
   return (
     <div className={`relative w-full overflow-hidden rounded-2xl border border-[#24212D]/12 ${heightClass}`}>
+      {!focusedProperty && (
+        <div className="pointer-events-none absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-xl border border-[#090A14]/12 bg-white/95 px-3 py-1.5 text-xs font-semibold text-[#090A14] shadow-sm backdrop-blur-xs">
+          <MapPin className="h-3.5 w-3.5 text-[#6B1CD4]" aria-hidden="true" />
+          <span>
+            {activeAreaName
+              ? `${properties.length} flat${properties.length === 1 ? '' : 's'} in ${activeAreaName}`
+              : `${properties.length} pinned flat${properties.length === 1 ? '' : 's'} in Pune`}
+          </span>
+        </div>
+      )}
+
       <GoogleMap
         mapId="DEMO_MAP_ID"
         defaultCenter={center}
@@ -146,6 +195,7 @@ const MapCanvas: React.FC<MapCanvasProps> = ({
         style={{ width: '100%', height: '100%' }}
       >
         <MapBoundsFitter properties={properties} focusedProperty={focusedProperty} />
+        {!focusedProperty && <MapNearMeControl />}
         {properties.map((property) => (
           <PropertyMarkerItem
             key={property.id}
@@ -158,7 +208,7 @@ const MapCanvas: React.FC<MapCanvasProps> = ({
         {selectedProperty && selectedMarker && (
           <InfoWindow
             anchor={selectedMarker}
-            maxWidth={260}
+            maxWidth={270}
             onCloseClick={() => {
               setSelectedProperty(null);
               setSelectedMarker(null);
@@ -166,7 +216,7 @@ const MapCanvas: React.FC<MapCanvasProps> = ({
           >
             <div className="p-1 text-[#24212D]">
               <p className="text-xs font-semibold text-[#6B1CD4]">
-                {selectedProperty.propertyType} ·{' '}
+                {selectedProperty.propertyCode} · {selectedProperty.propertyType} ·{' '}
                 {isPropertyRentedOut(selectedProperty) ? (
                   <span className="font-bold text-[#DC2626]">Rented Out</span>
                 ) : (
@@ -180,15 +230,26 @@ const MapCanvas: React.FC<MapCanvasProps> = ({
               <p className="mt-1.5 text-sm font-bold text-[#090A14] tabular-nums">
                 {formatINR(selectedProperty.monthlyRent)} / month
               </p>
-              {onSelectProperty && (
-                <button
-                  type="button"
-                  onClick={() => onSelectProperty(selectedProperty)}
-                  className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-[#6B1CD4] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#5412AD]"
+              <div className="mt-2 flex items-center gap-1.5">
+                {onSelectProperty && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectProperty(selectedProperty)}
+                    className="inline-flex flex-1 items-center justify-center rounded-lg bg-[#6B1CD4] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#5412AD]"
+                  >
+                    View Details
+                  </button>
+                )}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${selectedProperty.coordinates.lat},${selectedProperty.coordinates.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1 rounded-lg border border-[#090A14]/15 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#090A14] hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
                 >
-                  View Flat Details
-                </button>
-              )}
+                  <Navigation className="h-3 w-3" aria-hidden="true" />
+                  <span>Maps</span>
+                </a>
+              </div>
             </div>
           </InfoWindow>
         )}
@@ -200,6 +261,7 @@ const MapCanvas: React.FC<MapCanvasProps> = ({
 interface MapDirectoryFallbackProps {
   properties: PropertyListing[];
   focusedProperty?: PropertyListing | null;
+  activeAreaName?: string | null;
   onSelectProperty?: (property: PropertyListing) => void;
   heightClass: string;
   reason?: string;
@@ -208,6 +270,7 @@ interface MapDirectoryFallbackProps {
 const MapDirectoryFallback: React.FC<MapDirectoryFallbackProps> = ({
   properties,
   focusedProperty,
+  activeAreaName,
   onSelectProperty,
   heightClass,
   reason,
@@ -215,15 +278,19 @@ const MapDirectoryFallback: React.FC<MapDirectoryFallbackProps> = ({
   const list = focusedProperty ? [focusedProperty] : properties;
   return (
     <div
-      className={`flex flex-col justify-between rounded-2xl border border-[#24212D]/12 bg-[#F7F5FC] p-5 ${heightClass}`}
+      className={`flex flex-col justify-between overflow-y-auto rounded-2xl border border-[#24212D]/12 bg-[#F7F5FC] p-4 sm:p-5 ${heightClass}`}
     >
       <div>
         <div className="flex items-center gap-2 text-sm font-semibold text-[#090A14]">
           <MapPin className="h-4 w-4 text-[#6B1CD4]" aria-hidden="true" />
-          <span>Pune Approximate Neighborhood Locations</span>
+          <span>
+            {activeAreaName
+              ? `${activeAreaName} — Google Maps Flat Locations`
+              : 'Pune Rental Flat Google Map Locations'}
+          </span>
         </div>
         <p className="mt-1 text-xs text-[#6E6B7B]">
-          {reason || 'Approximate locality pins across Viman Nagar, Wadgaon Sheri & Somnath Nagar.'}
+          {reason || 'Tap any location pin below to view flat details or open directly in Google Maps.'}
         </p>
 
         <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -277,6 +344,7 @@ const MapDirectoryFallback: React.FC<MapDirectoryFallbackProps> = ({
 export const PuneListingsMap: React.FC<PuneListingsMapProps> = ({
   properties,
   focusedProperty,
+  activeAreaName,
   onSelectProperty,
   heightClass = 'h-[420px]',
 }) => {
@@ -287,6 +355,7 @@ export const PuneListingsMap: React.FC<PuneListingsMapProps> = ({
       <MapDirectoryFallback
         properties={properties}
         focusedProperty={focusedProperty}
+        activeAreaName={activeAreaName}
         onSelectProperty={onSelectProperty}
         heightClass={heightClass}
       />
@@ -294,10 +363,11 @@ export const PuneListingsMap: React.FC<PuneListingsMapProps> = ({
   }
 
   return (
-    <APIProvider apiKey={apiKey} libraries={['marker']} language="en" region="IN">
+    <APIProvider apiKey={apiKey} libraries={['marker', 'places']} language="en" region="IN">
       <MapCanvas
         properties={properties}
         focusedProperty={focusedProperty}
+        activeAreaName={activeAreaName}
         onSelectProperty={onSelectProperty}
         heightClass={heightClass}
       />

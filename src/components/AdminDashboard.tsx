@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Clock,
   Edit3,
+  ExternalLink,
   Eye,
   Home,
   Loader2,
@@ -701,15 +702,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         {prop.title}
                       </h3>
 
-                      <p className="flex items-center gap-1.5 text-xs text-[#524F61]">
-                        <MapPin className="h-3.5 w-3.5 shrink-0 text-[#6B1CD4]" />
-                        <span className="truncate">
-                          {prop.locality}
-                          {prop.societyName ? ` · ${prop.societyName}` : ''}
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-[#524F61]">
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-[#6B1CD4]" />
+                          <span className="truncate">
+                            {prop.locality}
+                            {prop.societyName ? ` · ${prop.societyName}` : ''}
+                          </span>
                         </span>
-                      </p>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${prop.coordinates.lat},${prop.coordinates.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-md bg-[#F5EFFD] px-2 py-0.5 text-[11px] font-semibold text-[#6B1CD4] hover:bg-[#6B1CD4] hover:text-white"
+                        >
+                          <span>Map Pin</span>
+                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                        </a>
+                      </div>
 
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-0.5 text-xs">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-0.5 text-xs">
                         <span className="font-bold text-[#6B1CD4] tabular-nums">
                           Rent: {formatINR(prop.monthlyRent)}/mo
                         </span>
@@ -722,10 +734,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             ? formatINR(prop.brokerageAmount)
                             : prop.brokerageStatus}
                         </span>
-                        <span className="inline-flex items-center gap-1 font-semibold text-[#090A14]">
-                          <Phone className="h-3 w-3 text-[#6B1CD4]" />
-                          {prop.submitterName} ({prop.submitterMobile})
-                        </span>
+                        <a
+                          href={`tel:+91${prop.submitterMobile.replace(/\D/g, '').slice(-10)}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#140A29] px-2.5 py-1 text-[11px] font-bold text-white tabular-nums transition-colors hover:bg-[#6B1CD4]"
+                          title={`Call ${prop.submitterRole}: ${prop.submitterName}`}
+                        >
+                          <Phone className="h-3 w-3" aria-hidden="true" />
+                          <span>
+                            {prop.submitterRole}: {prop.submitterName} · +91 {prop.submitterMobile}
+                          </span>
+                        </a>
                       </div>
 
                       {prop.workflowStatus === 'Rejected' && prop.rejectionReason && (
@@ -803,7 +821,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         className="inline-flex h-9 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
                       >
                         <WhatsAppIcon className="h-3.5 w-3.5 text-[#16A34A]" />
-                        <span>Owner</span>
+                        <span>{prop.submitterRole}</span>
                       </a>
 
                       <button
@@ -872,10 +890,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </p>
                 </div>
                 <div>
-                  <span className="text-[#656275]">Mobile / WhatsApp</span>
-                  <p className="font-bold text-[#090A14] tabular-nums">
-                    {viewingProperty.submitterMobile} / {viewingProperty.submitterWhatsapp}
-                  </p>
+                  <span className="text-[#656275]">Mobile / WhatsApp (Private — Admin Only)</span>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <a
+                      href={`tel:+91${viewingProperty.submitterMobile.replace(/\D/g, '').slice(-10)}`}
+                      className="font-bold text-[#6B1CD4] underline tabular-nums"
+                    >
+                      +91 {viewingProperty.submitterMobile}
+                    </a>
+                    {viewingProperty.submitterWhatsapp !== viewingProperty.submitterMobile && (
+                      <span className="font-semibold text-[#090A14] tabular-nums">
+                        / WA: {viewingProperty.submitterWhatsapp}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <span className="text-[#656275]">Rent / Deposit</span>

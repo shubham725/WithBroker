@@ -19,6 +19,7 @@ import {
   formatBrokerageLabel,
   formatDepositLabel,
   formatINR,
+  generateAutoPropertyDescription,
   getActiveListings,
   getLocalityListingCount,
   isPropertyRentedOut,
@@ -205,9 +206,10 @@ test('validateSubmissionForm validates all owner/broker & property fields thorou
   assert.ok(errors.availableFrom);
   assert.ok(errors.bathrooms);
   assert.ok(errors.balconies);
-  assert.ok(errors.description);
+  // Description is optional and auto-generated automatically
+  assert.equal(errors.description, undefined);
 
-  const valid: PropertySubmissionInput = {
+  const validWithEmptyDesc: PropertySubmissionInput = {
     name: 'Rohan Kulkarni',
     mobile: '9823012345',
     whatsapp: '9823012345',
@@ -225,14 +227,22 @@ test('validateSubmissionForm validates all owner/broker & property fields thorou
     floorNumber: '3',
     totalFloors: '7',
     carpetArea: '560 Sq. Ft.',
-    description: 'Bright 1BHK near Symbiosis campus with balcony and lift.',
+    description: '',
     facilities: ['24 Hours Water', 'Lift'],
     photoNames: ['living.jpg'],
   };
-  const noErrors = validateSubmissionForm(valid);
+  const noErrors = validateSubmissionForm(validWithEmptyDesc);
   assert.deepEqual(noErrors, {});
 
-  const waUrl = buildPropertySubmissionWhatsAppUrl(valid, 'WB-1010');
+  const autoDesc = generateAutoPropertyDescription(validWithEmptyDesc);
+  assert.ok(autoDesc.includes('Semi-Furnished 1BHK'));
+  assert.ok(autoDesc.includes('Ganga Nebula'));
+  assert.ok(autoDesc.includes('Viman Nagar, Pune'));
+  assert.ok(autoDesc.includes('₹18,000'));
+  assert.ok(autoDesc.includes('24 Hours Water, Lift'));
+  assert.ok(autoDesc.length >= 40);
+
+  const waUrl = buildPropertySubmissionWhatsAppUrl(validWithEmptyDesc, 'WB-1010');
   const decoded = decodeURIComponent(waUrl.split('?text=')[1]);
   assert.ok(decoded.includes('Property ID: WB-1010'));
   assert.ok(decoded.includes('Rohan Kulkarni (Broker)'));

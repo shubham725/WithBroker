@@ -191,7 +191,17 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
             {activeLocalityName && (
               <>
                 <span aria-hidden="true">·</span>
-                <span className="font-medium text-[#6B1CD4]">{activeLocalityName}</span>
+                <span className="font-semibold text-[#6B1CD4]">{activeLocalityName}</span>
+                {viewMode !== 'map' && properties.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('map')}
+                    className="inline-flex items-center gap-1 rounded-lg bg-[#F5EFFD] px-2 py-0.5 text-[11px] font-semibold text-[#6B1CD4] transition-colors hover:bg-[#6B1CD4] hover:text-white"
+                  >
+                    <MapIcon className="h-3 w-3" aria-hidden="true" />
+                    <span>View on Map</span>
+                  </button>
+                )}
               </>
             )}
             {hasActiveFilter && (
@@ -468,6 +478,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
             >
               <PuneListingsMap
                 properties={properties}
+                activeAreaName={activeLocalityName}
                 onSelectProperty={onViewDetails}
                 heightClass="h-[520px]"
               />
