@@ -1,7 +1,13 @@
 {
   "functions": {
     "api/property.ts": {
-      "includeFiles": "dist/index.html"
+      "includeFiles": "{dist/index.html,firebase-applet-config.json}"
+    },
+    "api/property-image.ts": {
+      "includeFiles": "firebase-applet-config.json"
+    },
+    "api/admin/ai-property-chat.ts": {
+      "includeFiles": "firebase-applet-config.json"
     }
   },
   "rewrites": [

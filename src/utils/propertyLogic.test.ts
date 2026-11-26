@@ -169,6 +169,8 @@ test('buildPropertyShareText includes Property ID, group name, group link, and w
   assert.ok(ad.includes(`👥 WhatsApp Group — ${WHATSAPP_COMMUNITY_NAME}:`));
   assert.ok(ad.includes(WHATSAPP_COMMUNITY_URL));
   assert.ok(ad.includes(`🌐 Website: ${WEBSITE_URL}`));
+  assert.ok(!ad.includes('🔗 Property Link:'));
+  assert.ok(!ad.includes('/property/'));
   assert.ok(ad.includes('WITHBROKER • RENT • SEARCH • CONNECT'));
 
   assert.ok(buildTelegramSharePostUrl(ad, propUrl).startsWith('https://t.me/share/url?url='));
@@ -265,11 +267,13 @@ test('getPropertyDirectUrl, buildWhatsAppPropertyShareText, and injectPropertyOg
   assert.equal(getPublicPropertyShareUrl('WB-1001'), 'https://withbroker.vercel.app/property/WB-1001');
   assert.equal(getOwnerSubmissionShareUrl(), 'https://withbroker.vercel.app/owner-add-property');
 
-  const waShare = buildWhatsAppPropertyShareText(flatA, urlA);
+  const waShare = buildWhatsAppPropertyShareText(flatA);
   assert.ok(waShare.includes(`🏠 ${flatA.title}`));
+  assert.ok(waShare.includes(`🆔 Property ID: ${flatA.propertyCode}`));
   assert.ok(waShare.includes('💰 Rent: ₹21,000/month'));
   assert.ok(waShare.includes('📍 Location: Near Phoenix Mall, Wadgaon Sheri, Pune'));
-  assert.ok(waShare.includes('View full details and photos:\nhttps://withbroker.vercel.app/property/WB-1001'));
+  assert.ok(waShare.includes(`View full details and photos:\n${WEBSITE_URL}`));
+  assert.ok(!waShare.includes('/property/WB-1001'));
   assert.ok(waShare.includes('Listed on WITHBROKER'));
 
   const baseHtml = '<!doctype html><html><head><title>Old</title><meta property="og:title" content="Old" /></head><body><div id="root"></div></body></html>';

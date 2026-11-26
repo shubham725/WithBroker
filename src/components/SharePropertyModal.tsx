@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Mail, MessageSquare, Send, Share2, X } from 'lucide-react';
+import { WEBSITE_URL } from '../data/properties';
 import { PropertyListing } from '../types/property';
 import {
   buildEmailSharePostUrl,
@@ -9,7 +10,6 @@ import {
   buildWhatsAppPropertyShareText,
   buildWhatsAppSharePostUrl,
   formatINR,
-  getPublicPropertyShareUrl,
 } from '../utils/propertyLogic';
 import { SafeImage } from './SafeImage';
 import { WhatsAppIcon } from './WhatsAppButton';
@@ -45,11 +45,10 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
 
   if (!property) return null;
 
-  const propertyUrl = getPublicPropertyShareUrl(property.propertyCode || property.id);
-  const shareText = buildPropertyShareText(property, propertyUrl);
-  const whatsAppQuickText = buildWhatsAppPropertyShareText(property, propertyUrl);
+  const shareText = buildPropertyShareText(property);
+  const whatsAppQuickText = buildWhatsAppPropertyShareText(property);
   const whatsAppShareUrl = buildWhatsAppSharePostUrl(whatsAppQuickText);
-  const telegramShareUrl = buildTelegramSharePostUrl(whatsAppQuickText, propertyUrl);
+  const telegramShareUrl = buildTelegramSharePostUrl(whatsAppQuickText, WEBSITE_URL);
   const smsShareUrl = buildSmsSharePostUrl(whatsAppQuickText);
   const emailShareUrl = buildEmailSharePostUrl(property, shareText);
 
@@ -90,7 +89,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
         await navigator.share({
           title: `${property.propertyType} Flat for Rent in ${property.locality}`,
           text: shareText,
-          url: propertyUrl,
+          url: WEBSITE_URL,
         });
         setShareFeedback('Shared via your device share sheet.');
         return;
@@ -160,7 +159,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
                   Location: {property.locality}
                 </p>
                 <p className="mt-0.5 truncate text-[11px] font-medium text-[#6B1CD4]">
-                  {propertyUrl}
+                  {WEBSITE_URL}
                 </p>
               </div>
             </div>

@@ -238,7 +238,7 @@ export function buildGeneralWhatsAppUrl(customGreeting?: string): string {
   return `https://wa.me/${WHATSAPP_NUMBER_DIGITS}?text=${encodeURIComponent(text)}`;
 }
 
-export function buildPropertyShareText(property: PropertyListing, propertyUrl: string): string {
+export function buildPropertyShareText(property: PropertyListing, _propertyUrl?: string): string {
   const propCode = property.propertyCode || property.id;
   const brokerageText =
     property.brokerageStatus === 'No Brokerage'
@@ -272,7 +272,6 @@ export function buildPropertyShareText(property: PropertyListing, propertyUrl: s
     `👥 WhatsApp Group — ${WHATSAPP_COMMUNITY_NAME}:`,
     WHATSAPP_COMMUNITY_URL,
     `🌐 Website: ${WEBSITE_URL}`,
-    `🔗 Property Link: ${propertyUrl}`,
     '',
     'WITHBROKER • RENT • SEARCH • CONNECT',
   ].join('\n');
@@ -280,8 +279,9 @@ export function buildPropertyShareText(property: PropertyListing, propertyUrl: s
 
 export function buildWhatsAppPropertyShareText(
   property: PropertyListing,
-  propertyUrl: string
+  _propertyUrl?: string
 ): string {
+  const propCode = property.propertyCode || property.id;
   const locationDisplay = property.locality.toLowerCase().includes('pune')
     ? property.locality
     : `${property.locality}, Pune`;
@@ -292,12 +292,13 @@ export function buildWhatsAppPropertyShareText(
 
   return [
     `🏠 ${headline}`,
+    `🆔 Property ID: ${propCode}`,
     '',
     `💰 Rent: ${formatINR(property.monthlyRent)}/month`,
     `📍 Location: ${locationDisplay}`,
     '',
     'View full details and photos:',
-    propertyUrl,
+    WEBSITE_URL,
     '',
     'Listed on WITHBROKER',
     'RENT • SEARCH • CONNECT',
@@ -308,8 +309,8 @@ export function buildWhatsAppSharePostUrl(shareText: string): string {
   return `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 }
 
-export function buildTelegramSharePostUrl(shareText: string, propertyUrl: string): string {
-  return `https://t.me/share/url?url=${encodeURIComponent(propertyUrl)}&text=${encodeURIComponent(shareText)}`;
+export function buildTelegramSharePostUrl(shareText: string, shareUrl: string = WEBSITE_URL): string {
+  return `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
 }
 
 export function buildSmsSharePostUrl(shareText: string): string {
