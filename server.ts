@@ -1,8 +1,19 @@
 import express from 'express';
+import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import {
+  fetchPublicPhotoBytes,
+  fetchPublicPropertyForOg,
+  injectPropertyOgIntoHtml,
+  resolveRequestOrigin,
+} from './src/lib/propertyOg.ts';
+import {
+  runAdminPropertyAssistant,
+  verifySoleAdminFirebaseToken,
+} from './src/lib/adminAiPropertyChat.ts';
 import {
   DuplicateSubmissionError,
   createPropertySubmission,
@@ -108,6 +119,7 @@ function isRateLimited(ip: string): boolean {
 async function startServer() {
   const app = express();
   app.set('trust proxy', 1);
+  app.use('/api/admin/ai-property-chat', express.json({ limit: '12mb' }));
   app.use(express.json({ limit: '2mb' }));
 
   // Public API: Fetch approved & live properties (Pending/Rejected & private PII never exposed)
@@ -303,6 +315,20 @@ async function startServer() {
         error: 'Unable to submit property right now. Please try again in a moment.',
       });
     }
+  });
+
+  // Public approved Firestore photo endpoint for WhatsApp/Social Open Graph images
+  app.get('/api/property-image/:photoId', async (req, res) => {
+    const { photoId } = req.params;
+    const photo = await fetchPublicPhotoBytes(photoId);
+    if (!photo) {
+      return res.status(404).json({ error: 'Public property photo not found.' });
+    }
+    res.setHeader('Content-Type', photo.mimeType);
+    res.setHeader('Content-Length', String(photo.buffer.length));
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+    return res.send(photo.buffer);
   });
 
   // Photo serving endpoint with status-based access control
@@ -555,20 +581,73 @@ async function startServer() {
     }
   });
 
+  // Admin API: AI Property Assistant Chatbot (Sole Admin Firebase ID token verified)
+  app.post('/api/admin/ai-property-chat', express.json({ limit: '12mb' }), async (req, res) => {
+    const authCheck = await verifySoleAdminFirebaseToken(req.headers.authorization);
+    if (authCheck.ok === false) {
+      return res.status(authCheck.status).json({ error: authCheck.error });
+    }
+
+    const result = await runAdminPropertyAssistant(req.body);
+    if (result.error) {
+      return res.status(result.status).json({ error: result.error });
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).json(result.data);
+  });
+
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'API route not found.' });
   });
 
-  // Frontend Vite / Static Assets Serving
+  // Frontend Vite / Static Assets Serving + Dynamic Open Graph HTML for /property/:propertyId
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
+
+    app.get('/property/:propertyId', async (req, res, next) => {
+      try {
+        const propertyId = String(req.params.propertyId || '').trim();
+        const origin = resolveRequestOrigin(req.headers);
+        const templatePath = path.resolve(__dirname, 'index.html');
+        let html = fs.readFileSync(templatePath, 'utf-8');
+        const property = await fetchPublicPropertyForOg(propertyId);
+        if (property) {
+          html = injectPropertyOgIntoHtml(html, property, origin);
+        }
+        html = await vite.transformIndexHtml(req.originalUrl, html);
+        res.status(200).set({
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=0, s-maxage=300',
+        });
+        return res.send(html);
+      } catch (err) {
+        return next(err);
+      }
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.resolve(__dirname, 'dist');
+    const distIndexHtml = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+
+    app.get('/property/:propertyId', async (req, res) => {
+      const propertyId = String(req.params.propertyId || '').trim();
+      const origin = resolveRequestOrigin(req.headers);
+      const property = await fetchPublicPropertyForOg(propertyId);
+      const html = property
+        ? injectPropertyOgIntoHtml(distIndexHtml, property, origin)
+        : distIndexHtml;
+      res.status(200).set({
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=600',
+      });
+      return res.send(html);
+    });
+
     app.use(express.static(distPath));
     app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));

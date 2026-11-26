@@ -20,14 +20,15 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { WEBSITE_URL } from '../data/properties';
 import { PropertyListing } from '../types/property';
 import {
   buildWhatsAppInquiryUrl,
+  buildWhatsAppPropertyShareText,
+  buildWhatsAppSharePostUrl,
   formatBrokerageLabel,
   formatDepositLabel,
   formatINR,
-  getPropertyDirectUrl,
+  getPublicPropertyShareUrl,
   isPropertyRentedOut,
 } from '../utils/propertyLogic';
 import { PuneListingsMap } from './PuneListingsMap';
@@ -77,11 +78,10 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
   const currentImage = images[activeIndex] ?? images[0];
   const isRentedOut = isPropertyRentedOut(property);
 
-  const pageUrl =
-    typeof window !== 'undefined'
-      ? getPropertyDirectUrl(window.location.href, property.id)
-      : getPropertyDirectUrl(WEBSITE_URL, property.id);
+  const pageUrl = getPublicPropertyShareUrl(property.propertyCode || property.id);
   const whatsAppUrl = buildWhatsAppInquiryUrl(property, pageUrl);
+  const whatsAppShareText = buildWhatsAppPropertyShareText(property, pageUrl);
+  const whatsAppShareUrl = buildWhatsAppSharePostUrl(whatsAppShareText);
 
   const handlePrev = () => {
     setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
@@ -398,6 +398,17 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                     <span>{isRentedOut ? 'Ask for Similar Flats' : 'Contact on WhatsApp'}</span>
                   </a>
 
+                  <a
+                    href={whatsAppShareUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="whatsapp-share-property-btn"
+                    className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#16A34A] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#15803D]"
+                  >
+                    <WhatsAppIcon className="h-4 w-4 text-white" />
+                    <span>Share on WhatsApp</span>
+                  </a>
+
                   {!isRentedOut && (
                     <button
                       type="button"
@@ -405,7 +416,7 @@ export const PropertyDetails: React.FC<PropertyDetailsProps> = ({
                       className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[#090A14]/15 bg-white px-4 py-2.5 text-sm font-semibold text-[#090A14] transition-colors duration-150 hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
                     >
                       <Share2 className="h-4 w-4" aria-hidden="true" />
-                      <span>Share Property Post</span>
+                      <span>More Share Options &amp; Preview</span>
                     </button>
                   )}
                 </div>

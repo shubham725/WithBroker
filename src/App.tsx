@@ -153,20 +153,46 @@ function WithBrokerAppContent() {
     }
   }, [savedIds]);
 
-  // Support deep links like ?flat=WB-1001
+  // Support clean /property/:propertyId links (for WhatsApp OG previews) as well as ?flat=WB-1001
   useEffect(() => {
     if (typeof window === 'undefined' || allProperties.length === 0) return;
+    const pathMatch = /^\/property\/([^/?#]+)/i.exec(window.location.pathname);
     const params = new URLSearchParams(window.location.search);
-    const flatId = params.get('flat');
+    const flatId = pathMatch?.[1]
+      ? decodeURIComponent(pathMatch[1])
+      : params.get('flat');
     if (flatId) {
+      const targetLower = flatId.trim().toLowerCase();
       const found = allProperties.find(
-        (p) => p.id === flatId || p.propertyCode === flatId
+        (p) =>
+          p.propertyCode.toLowerCase() === targetLower ||
+          p.id.toLowerCase() === targetLower
       );
       if (found) {
         setSelectedProperty(found);
       }
     }
   }, [allProperties]);
+
+  const handleOpenPropertyDetails = (property: PropertyListing) => {
+    setSelectedProperty(property);
+    if (typeof window !== 'undefined') {
+      const code = encodeURIComponent(property.propertyCode || property.id);
+      window.history.replaceState(null, '', `/property/${code}`);
+    }
+  };
+
+  const handleClosePropertyDetails = () => {
+    setSelectedProperty(null);
+    if (typeof window !== 'undefined') {
+      if (
+        window.location.pathname.startsWith('/property/') ||
+        window.location.search.includes('flat=')
+      ) {
+        window.history.replaceState(null, '', '/');
+      }
+    }
+  };
 
   const dynamicLocalities = useMemo(
     () => buildDynamicLocalities(allProperties),
@@ -330,7 +356,7 @@ function WithBrokerAppContent() {
             onToggleSave={handleToggleSave}
             onFilterChange={setFilters}
             onResetFilters={() => setFilters(INITIAL_FILTERS)}
-            onViewDetails={(property) => setSelectedProperty(property)}
+            onViewDetails={handleOpenPropertyDetails}
             onShare={(property) => setShareProperty(property)}
           />
         )}
@@ -351,7 +377,7 @@ function WithBrokerAppContent() {
         property={selectedProperty}
         isSaved={selectedProperty ? savedIds.includes(selectedProperty.id) : false}
         onToggleSave={handleToggleSave}
-        onClose={() => setSelectedProperty(null)}
+        onClose={handleClosePropertyDetails}
         onShare={(property) => setShareProperty(property)}
       />
 

@@ -15,6 +15,7 @@ import {
   buildSmsSharePostUrl,
   buildTelegramSharePostUrl,
   buildWhatsAppInquiryUrl,
+  buildWhatsAppPropertyShareText,
   filterProperties,
   formatBrokerageLabel,
   formatDepositLabel,
@@ -22,9 +23,13 @@ import {
   generateAutoPropertyDescription,
   getActiveListings,
   getLocalityListingCount,
+  getOwnerSubmissionShareUrl,
+  getPropertyDirectUrl,
+  getPublicPropertyShareUrl,
   isPropertyRentedOut,
   validateSubmissionForm,
 } from './propertyLogic';
+import { injectPropertyOgIntoHtml, type OgPropertyData } from '../lib/propertyOg';
 import { PropertySubmissionInput } from '../types/property';
 
 test('getActiveListings excludes rented or inactive properties', () => {
@@ -248,3 +253,111 @@ test('validateSubmissionForm validates all owner/broker & property fields thorou
   assert.ok(decoded.includes('Rohan Kulkarni (Broker)'));
   assert.ok(decoded.includes('₹18,000'));
 });
+
+test('getPropertyDirectUrl, buildWhatsAppPropertyShareText, and injectPropertyOgIntoHtml generate unique per-property metadata', () => {
+  const flatA = SAMPLE_PROPERTIES[0];
+  const flatB = SAMPLE_PROPERTIES[2];
+  const urlA = getPropertyDirectUrl('https://withbroker.vercel.app/?foo=1', flatA.propertyCode);
+  const urlB = getPropertyDirectUrl('https://withbroker.vercel.app/', flatB.propertyCode);
+
+  assert.equal(urlA, 'https://withbroker.vercel.app/property/WB-1001');
+  assert.equal(urlB, 'https://withbroker.vercel.app/property/WB-1003');
+  assert.equal(getPublicPropertyShareUrl('WB-1001'), 'https://withbroker.vercel.app/property/WB-1001');
+  assert.equal(getOwnerSubmissionShareUrl(), 'https://withbroker.vercel.app/owner-add-property');
+
+  const waShare = buildWhatsAppPropertyShareText(flatA, urlA);
+  assert.ok(waShare.includes(`🏠 ${flatA.title}`));
+  assert.ok(waShare.includes('💰 Rent: ₹21,000/month'));
+  assert.ok(waShare.includes('📍 Location: Near Phoenix Mall, Wadgaon Sheri, Pune'));
+  assert.ok(waShare.includes('View full details and photos:\nhttps://withbroker.vercel.app/property/WB-1001'));
+  assert.ok(waShare.includes('Listed on WITHBROKER'));
+
+  const baseHtml = '<!doctype html><html><head><title>Old</title><meta property="og:title" content="Old" /></head><body><div id="root"></div></body></html>';
+
+  const ogDataA: OgPropertyData = {
+    propertyCode: 'WB-1001',
+    title: flatA.title,
+    propertyType: flatA.propertyType,
+    locality: flatA.locality,
+    subLocality: flatA.subLocality,
+    monthlyRent: flatA.monthlyRent,
+    furnishing: flatA.furnishing,
+    availabilityLabel: 'Available',
+    workflowStatus: 'Available',
+    shortDescription: flatA.shortDescription,
+    fullDescription: flatA.fullDescription,
+    firstImage: flatA.images[0],
+    updatedAtVersion: '1764057600',
+  };
+
+  const ogDataUploaded: OgPropertyData = {
+    propertyCode: 'WB-9999',
+    title: '2BHK Flat in "Viman Nagar" <Pune>',
+    propertyType: '2BHK',
+    locality: 'Viman Nagar, Pune',
+    subLocality: 'Viman Nagar',
+    monthlyRent: 28000,
+    furnishing: 'Semi-Furnished',
+    availabilityLabel: 'Available',
+    workflowStatus: 'Available',
+    shortDescription: 'Spacious 2BHK near Symbiosis.',
+    fullDescription: 'Spacious 2BHK near Symbiosis.',
+    firstImage: 'fbphoto://photo-12345-abcdef',
+    updatedAtVersion: '1764057999',
+  };
+
+  const htmlA = injectPropertyOgIntoHtml(baseHtml, ogDataA, 'https://withbroker.vercel.app');
+  const htmlB = injectPropertyOgIntoHtml(baseHtml, ogDataUploaded, 'https://withbroker.vercel.app');
+
+  assert.ok(htmlA.includes('property="og:title" content="1BHK Furnished Flat Near Phoenix Mall – ₹21,000/month | WithBroker"'));
+  assert.ok(htmlA.includes('property="og:image" content="https://withbroker.vercel.app/assets/properties/flat-1/photo-2.jpeg?v=1764057600"'));
+  assert.ok(htmlA.includes('property="og:url" content="https://withbroker.vercel.app/property/WB-1001"'));
+  assert.ok(htmlA.includes('name="twitter:card" content="summary_large_image"'));
+  assert.ok(htmlA.includes('property="og:site_name" content="WithBroker"'));
+
+  // Uploaded Firestore photo resolves to public HTTPS image endpoint & special chars are safely escaped
+  assert.ok(htmlB.includes('property="og:image" content="https://withbroker.vercel.app/api/property-image/photo-12345-abcdef?v=1764057999"'));
+  assert.ok(htmlB.includes('name="twitter:image" content="https://withbroker.vercel.app/api/property-image/photo-12345-abcdef?v=1764057999"'));
+  assert.ok(!htmlB.includes('<Pune>'));
+  assert.ok(htmlB.includes('&lt;Pune&gt;'));
+  assert.notEqual(htmlA, htmlB);
+});
+
+test('Admin AI Property Assistant draft sanitizer normalizes types, currency, phones, and detects missing fields', async () => {
+  const { sanitizeAiDraft, computeMissingDraftFields } = await import('../lib/adminAiPropertyChat.ts');
+
+  const partial = sanitizeAiDraft({
+    propertyType: '2 bhk',
+    furnishingStatus: 'semi furnished',
+    location: 'Wadgaon Sheri, Pune',
+    monthlyRent: 24000,
+    securityDeposit: 50000,
+    brokerageAmount: 24000,
+    submitterRole: 'Broker',
+    submitterMobile: '+91 98230-12345',
+    bathrooms: 2,
+    balconies: 1,
+    facilities: ['Lift', 'Covered Parking', 'Lift'],
+  });
+
+  assert.equal(partial.propertyType, '2BHK');
+  assert.equal(partial.furnishingStatus, 'Semi-Furnished');
+  assert.equal(partial.monthlyRent, 24000);
+  assert.equal(partial.submitterMobile, '9823012345');
+  assert.equal(partial.submitterWhatsapp, '9823012345');
+  assert.deepEqual(partial.facilities, ['Lift', 'Covered Parking']);
+  assert.deepEqual(computeMissingDraftFields(partial), []);
+
+  const incomplete = sanitizeAiDraft({
+    propertyType: 'invalid',
+    location: '',
+    monthlyRent: 200,
+    submitterMobile: '123',
+  });
+  assert.equal(incomplete.propertyType, '');
+  assert.equal(incomplete.monthlyRent, null);
+  assert.equal(incomplete.submitterMobile, '9834626078');
+  assert.equal(computeMissingDraftFields(incomplete).length, 3);
+});
+
+

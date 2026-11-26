@@ -140,8 +140,31 @@ export function formatBrokerageLabel(property: PropertyListing): string {
 }
 
 export function getPropertyDirectUrl(baseUrl: string, propertyId: string): string {
-  const cleanBase = baseUrl.split('#')[0].split('?')[0];
-  return `${cleanBase}?flat=${encodeURIComponent(propertyId)}#flats`;
+  const cleanId = encodeURIComponent(propertyId.trim());
+  try {
+    const parsed = new URL(baseUrl);
+    return `${parsed.origin}/property/${cleanId}`;
+  } catch {
+    const cleanBase = baseUrl.split('#')[0].split('?')[0].replace(/\/+$/, '');
+    return `${cleanBase}/property/${cleanId}`;
+  }
+}
+
+/**
+ * Always produces the canonical live Vercel property share URL:
+ * https://withbroker.vercel.app/property/<propertyCode>
+ */
+export function getPublicPropertyShareUrl(propertyId: string): string {
+  return getPropertyDirectUrl(WEBSITE_URL, propertyId);
+}
+
+/**
+ * Canonical live Vercel Direct Owner Property Submission URL:
+ * https://withbroker.vercel.app/owner-add-property
+ */
+export function getOwnerSubmissionShareUrl(): string {
+  const cleanOrigin = WEBSITE_URL.replace(/\/+$/, '');
+  return `${cleanOrigin}/owner-add-property`;
 }
 
 export function buildWhatsAppInquiryUrl(property: PropertyListing, currentUrl: string): string {
@@ -252,6 +275,32 @@ export function buildPropertyShareText(property: PropertyListing, propertyUrl: s
     `🔗 Property Link: ${propertyUrl}`,
     '',
     'WITHBROKER • RENT • SEARCH • CONNECT',
+  ].join('\n');
+}
+
+export function buildWhatsAppPropertyShareText(
+  property: PropertyListing,
+  propertyUrl: string
+): string {
+  const locationDisplay = property.locality.toLowerCase().includes('pune')
+    ? property.locality
+    : `${property.locality}, Pune`;
+
+  const headline = property.title.trim()
+    ? property.title.trim()
+    : `${property.propertyType} Flat for Rent – ${property.subLocality}`;
+
+  return [
+    `🏠 ${headline}`,
+    '',
+    `💰 Rent: ${formatINR(property.monthlyRent)}/month`,
+    `📍 Location: ${locationDisplay}`,
+    '',
+    'View full details and photos:',
+    propertyUrl,
+    '',
+    'Listed on WITHBROKER',
+    'RENT • SEARCH • CONNECT',
   ].join('\n');
 }
 

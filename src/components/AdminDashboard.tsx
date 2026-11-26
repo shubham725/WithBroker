@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bell,
+  Bot,
   Building2,
   Check,
   CheckCircle2,
@@ -22,6 +23,7 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Trash2,
   UserCheck,
   Users,
@@ -52,7 +54,9 @@ import {
   buildOwnerContactWhatsAppUrl,
   formatDepositLabel,
   formatINR,
+  getOwnerSubmissionShareUrl,
 } from '../utils/propertyLogic';
+import { AdminAiChatbot } from './AdminAiChatbot';
 import { SafeImage } from './SafeImage';
 import { WhatsAppIcon } from './WhatsAppButton';
 
@@ -120,6 +124,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [rejectTarget, setRejectTarget] = useState<AdminPropertyRecord | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<AdminPropertyRecord | null>(null);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -441,6 +446,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* AI Property Chatbot Launcher */}
+            <button
+              type="button"
+              data-testid="open-admin-ai-chatbot-btn"
+              onClick={() => setAiChatOpen(true)}
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#9333EA] px-3 text-xs font-bold text-white shadow-sm ring-1 ring-white/20 transition-opacity hover:opacity-95 sm:px-3.5"
+            >
+              <Bot className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>AI Add Flat</span>
+            </button>
+
             {/* Notifications Bell */}
             <div className="relative">
               <button
@@ -564,12 +580,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )}
 
+        {/* AI Property Chatbot Quick Launch Banner */}
+        <section
+          aria-label="AI Property Assistant"
+          className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#7C2AE8]/25 bg-gradient-to-r from-[#140A29] to-[#2B1257] p-4 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7C2AE8] text-white">
+              <Sparkles className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-display text-sm font-bold leading-snug">
+                Add New Flat Instantly with AI Chatbot
+              </p>
+              <p className="mt-0.5 text-xs text-white/75">
+                Paste any flat details or WhatsApp message + upload photos — AI extracts all fields and adds the flat straight to your property list.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAiChatOpen(true)}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 text-xs font-bold text-[#140A29] transition-colors hover:bg-[#F5EFFD]"
+          >
+            <Bot className="h-4 w-4 text-[#6B1CD4]" aria-hidden="true" />
+            <span>Open AI Chatbot</span>
+          </button>
+        </section>
+
         {/* Direct Owner Form Link Strip (1-tap Copy or WhatsApp to Flat Owners) */}
         {(() => {
-          const ownerFormUrl =
-            typeof window !== 'undefined'
-              ? `${window.location.origin}/owner-add-property`
-              : '/owner-add-property';
+          const ownerFormUrl = getOwnerSubmissionShareUrl();
           const ownerShareMsg = encodeURIComponent(
             `Hello! You can directly add your rental flat on WithBroker using this Owner Form link (free, fast, no login needed):\n\n${ownerFormUrl}\n\nOnce you submit, we will verify and list it for tenants.`
           );
@@ -1120,6 +1161,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onSave={handleSaveEdit}
         />
       )}
+
+      {/* Admin AI Property Assistant Chatbot Drawer */}
+      <AdminAiChatbot
+        isOpen={aiChatOpen}
+        onClose={() => setAiChatOpen(false)}
+        onPropertyCreated={(propertyCode, status) => {
+          showToast(
+            status === 'Available'
+              ? `AI added & published ${propertyCode} live on WithBroker!`
+              : `AI saved ${propertyCode} in Pending Approval.`
+          );
+          void fetchAdminData();
+          onDataChanged();
+        }}
+      />
     </div>
   );
 };

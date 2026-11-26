@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Mail, MessageSquare, Send, Share2, X } from 'lucide-react';
-import { WEBSITE_URL } from '../data/properties';
 import { PropertyListing } from '../types/property';
 import {
   buildEmailSharePostUrl,
   buildPropertyShareText,
   buildSmsSharePostUrl,
   buildTelegramSharePostUrl,
+  buildWhatsAppPropertyShareText,
   buildWhatsAppSharePostUrl,
-  getPropertyDirectUrl,
+  formatINR,
+  getPublicPropertyShareUrl,
 } from '../utils/propertyLogic';
+import { SafeImage } from './SafeImage';
 import { WhatsAppIcon } from './WhatsAppButton';
 
 interface SharePropertyModalProps {
@@ -43,11 +45,12 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
 
   if (!property) return null;
 
-  const propertyUrl = getPropertyDirectUrl(WEBSITE_URL, property.id);
+  const propertyUrl = getPublicPropertyShareUrl(property.propertyCode || property.id);
   const shareText = buildPropertyShareText(property, propertyUrl);
-  const whatsAppShareUrl = buildWhatsAppSharePostUrl(shareText);
-  const telegramShareUrl = buildTelegramSharePostUrl(shareText, propertyUrl);
-  const smsShareUrl = buildSmsSharePostUrl(shareText);
+  const whatsAppQuickText = buildWhatsAppPropertyShareText(property, propertyUrl);
+  const whatsAppShareUrl = buildWhatsAppSharePostUrl(whatsAppQuickText);
+  const telegramShareUrl = buildTelegramSharePostUrl(whatsAppQuickText, propertyUrl);
+  const smsShareUrl = buildSmsSharePostUrl(whatsAppQuickText);
   const emailShareUrl = buildEmailSharePostUrl(property, shareText);
 
   const handleCopyText = async () => {
@@ -135,7 +138,34 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
           </button>
         </div>
 
-        <div className="overflow-y-auto p-5">
+        <div className="overflow-y-auto p-5 space-y-4">
+          {/* Rich WhatsApp / Social Link Preview Card */}
+          <div className="overflow-hidden rounded-xl border border-[#090A14]/10 bg-[#F9F8FC]">
+            <div className="flex items-center gap-3 p-3">
+              <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-[#EDE7F9]">
+                <SafeImage
+                  src={property.images[0] || ''}
+                  alt={property.title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold tracking-wider text-[#6B1CD4] uppercase">
+                  WhatsApp / Social Link Preview
+                </p>
+                <p className="truncate text-xs font-bold text-[#090A14] sm:text-sm">
+                  {property.title} – {formatINR(property.monthlyRent)}/month
+                </p>
+                <p className="truncate text-[11px] text-[#524F61]">
+                  Location: {property.locality}
+                </p>
+                <p className="mt-0.5 truncate text-[11px] font-medium text-[#6B1CD4]">
+                  {propertyUrl}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <label htmlFor="share-post-preview" className="sr-only">
             Formatted property advertisement text
           </label>
@@ -144,7 +174,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
             id="share-post-preview"
             readOnly
             value={shareText}
-            rows={15}
+            rows={12}
             className="w-full resize-none rounded-xl border border-[#090A14]/10 bg-[#F9F8FC] p-4 font-sans text-xs sm:text-[13px] leading-relaxed text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
           />
 

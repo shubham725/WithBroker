@@ -1,5 +1,21 @@
 {
+  "functions": {
+    "api/property.ts": {
+      "includeFiles": "dist/index.html"
+    }
+  },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/property-image/:photoId",
+      "destination": "/api/property-image?photoId=:photoId"
+    },
+    {
+      "source": "/property/:id",
+      "destination": "/api/property?id=:id"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }

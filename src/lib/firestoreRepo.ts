@@ -28,6 +28,7 @@ import type {
   WorkflowStatus,
 } from '../types/property';
 import { generateAutoPropertyDescription } from '../utils/propertyLogic';
+import type { AiExtractedPropertyDraft } from '../types/aiPropertyChat';
 import { OperationType, db, handleFirestoreError } from './firebase';
 
 const PUBLIC_COLLECTION = 'public_properties';
@@ -1204,3 +1205,223 @@ export async function markAllAdminNotificationsRead(docIds: string[]): Promise<v
     handleFirestoreError(error, OperationType.UPDATE, NOTIFICATIONS_COLLECTION);
   }
 }
+
+/**
+ * Sole Admin: Directly creates a new rental property (with uploaded photos) from the Admin AI Chatbot.
+ * Supports publishing live immediately (`workflowStatus: 'Available'`) or saving as `'Pending'`.
+ * Strictly adheres to every field boundary in `firestore.rules`.
+ */
+export async function adminCreatePropertyFromAiDraft(
+  draft: AiExtractedPropertyDraft,
+  photoFiles: File[],
+  publishMode: 'Available' | 'Pending' = 'Available',
+  onProgress?: (stage: string) => void
+): Promise<{
+  propertyCode: string;
+  workflowStatus: WorkflowStatus;
+  photoCount: number;
+  title: string;
+}> {
+  if (!draft.propertyType) {
+    throw new Error('Property type (1RK, 1BHK, 2BHK, or 3BHK) is required.');
+  }
+  const cleanLocation = draft.location.trim().slice(0, 180);
+  if (cleanLocation.length < 2) {
+    throw new Error('Property location is required.');
+  }
+  const monthlyRent = Math.round(Number(draft.monthlyRent || 0));
+  if (!Number.isFinite(monthlyRent) || monthlyRent < 1000 || monthlyRent > 500000) {
+    throw new Error('Monthly rent must be between ₹1,000 and ₹5,00,000.');
+  }
+
+  const propertyCode = generatePropertyCode();
+  const area = inferAreaMeta(cleanLocation);
+  const isPublicListing = publishMode === 'Available';
+
+  const rawMobile = normalizePhone10(draft.submitterMobile || '9834626078');
+  const submitterMobile = /^[6-9]\d{9}$/.test(rawMobile) ? rawMobile : '9834626078';
+  const rawWhatsapp = normalizePhone10(draft.submitterWhatsapp || submitterMobile);
+  const submitterWhatsapp = /^[6-9]\d{9}$/.test(rawWhatsapp) ? rawWhatsapp : submitterMobile;
+  const submitterName =
+    draft.submitterName.trim().length >= 2
+      ? draft.submitterName.trim().slice(0, 100)
+      : 'WithBroker Team';
+
+  const securityDeposit =
+    draft.securityDeposit !== null &&
+    Number.isFinite(draft.securityDeposit) &&
+    draft.securityDeposit >= 0
+      ? Math.min(5000000, Math.round(draft.securityDeposit))
+      : null;
+
+  const brokerageAmount =
+    draft.brokerageAmount !== null &&
+    Number.isFinite(draft.brokerageAmount) &&
+    draft.brokerageAmount >= 0
+      ? Math.min(1000000, Math.round(draft.brokerageAmount))
+      : 0;
+
+  const bathrooms = Math.max(1, Math.min(10, Math.round(Number(draft.bathrooms || 1))));
+  const balconies = Math.max(0, Math.min(10, Math.round(Number(draft.balconies || 0))));
+
+  const titlePrefix = draft.furnishingStatus === 'Unfurnished' ? '' : `${draft.furnishingStatus} `;
+  const fallbackTitle = `${titlePrefix}${draft.propertyType} in ${draft.societyName.trim() || area.label}`;
+  const title = (draft.title.trim().length >= 3 ? draft.title.trim() : fallbackTitle).slice(0, 180);
+
+  const floorNum = draft.floorNumber.trim().slice(0, 30);
+  const totalFl = draft.totalFloors.trim().slice(0, 30);
+  const floorInfo =
+    floorNum && totalFl
+      ? `Floor ${floorNum} of ${totalFl}`
+      : floorNum
+        ? `Floor ${floorNum}`
+        : null;
+
+  const facilities = Array.from(
+    new Set(
+      (draft.facilities || [])
+        .map((f) => String(f).trim().slice(0, 60))
+        .filter((f) => f.length >= 2)
+    )
+  ).slice(0, 15);
+
+  const filesToUpload = photoFiles.slice(0, 8);
+  const photoRefs: string[] = [];
+  for (let i = 0; i < filesToUpload.length; i += 1) {
+    const file = filesToUpload[i];
+    onProgress?.(`Processing photo ${i + 1} of ${filesToUpload.length}...`);
+    await new Promise((r) => window.setTimeout(r, 0));
+    const compressed = await compressImageFileToDataUrl(file);
+
+    onProgress?.(`Uploading photo ${i + 1} of ${filesToUpload.length}...`);
+    const photoId = generateDocId('photo');
+    try {
+      await setDoc(doc(db, PHOTOS_COLLECTION, photoId), {
+        propertyCode,
+        filename: compressed.filename,
+        mimeType: compressed.mimeType,
+        dataUrl: compressed.dataUrl,
+        isPublic: isPublicListing,
+        createdAt: serverTimestamp(),
+      });
+      photoDataUrlCache.set(photoId, compressed.dataUrl);
+      photoRefs.push(`${PHOTO_PREFIX}${photoId}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${PHOTOS_COLLECTION}/${photoId}`);
+    }
+  }
+
+  onProgress?.(isPublicListing ? 'Publishing flat live on WithBroker...' : 'Saving flat as Pending...');
+
+  const fallbackDesc = generateAutoPropertyDescription({
+    name: submitterName,
+    mobile: submitterMobile,
+    whatsapp: submitterWhatsapp,
+    submitterRole: draft.submitterRole,
+    propertyType: draft.propertyType,
+    location: cleanLocation,
+    societyName: draft.societyName,
+    monthlyRent: String(monthlyRent),
+    securityDeposit: securityDeposit !== null ? String(securityDeposit) : '0',
+    brokerageAmount: String(brokerageAmount),
+    furnishingStatus: draft.furnishingStatus,
+    availableFrom: draft.availableFrom || 'Immediate',
+    bathrooms: String(bathrooms),
+    balconies: String(balconies),
+    floorNumber: floorNum,
+    totalFloors: totalFl,
+    carpetArea: draft.carpetArea,
+    description: '',
+    facilities,
+    photoNames: [],
+  });
+
+  const finalDescription = (
+    draft.description.trim().length >= 15 ? draft.description.trim() : fallbackDesc
+  ).slice(0, 2500);
+
+  const commonFields = {
+    propertyCode,
+    title,
+    propertyType: draft.propertyType as PropertyType,
+    locality: cleanLocation,
+    subLocality: (area.label || cleanLocation).slice(0, 140),
+    localitySlug: area.slug || 'other',
+    societyName: draft.societyName.trim() ? draft.societyName.trim().slice(0, 160) : null,
+    publicAreaNote: `${cleanLocation.slice(0, 160)} (exact address shared upon inquiry)`,
+    lat: area.lat,
+    lng: area.lng,
+    monthlyRent,
+    securityDeposit,
+    brokerageStatus: brokerageAmount > 0 ? 'Applicable' : 'No Brokerage',
+    brokerageAmount,
+    maintenanceCharges: null,
+    furnishing: draft.furnishingStatus,
+    carpetArea: draft.carpetArea.trim() ? draft.carpetArea.trim().slice(0, 60) : null,
+    builtUpArea: null,
+    floorNumber: floorNum || null,
+    totalFloors: totalFl || null,
+    floorInfo: floorInfo ? floorInfo.slice(0, 80) : null,
+    facing: null,
+    bathrooms,
+    bathroomType: `${bathrooms} Bathroom${bathrooms > 1 ? 's' : ''}`,
+    balconies,
+    parking: (draft.parking.trim() || 'Ask on inquiry').slice(0, 100),
+    waterAvailability: (draft.waterAvailability.trim() || '24 Hours Water Supply').slice(0, 100),
+    liftAvailability: (draft.liftAvailability.trim() || 'Ask on inquiry').slice(0, 100),
+    suitableFor: draft.suitableFor || 'Family / Bachelors',
+    availableFrom: (draft.availableFrom.trim() || 'Immediate').slice(0, 60),
+    shortDescription: finalDescription.slice(0, 220),
+    fullDescription: finalDescription,
+    additionalNotes:
+      brokerageAmount > 0
+        ? `Brokerage ₹${brokerageAmount.toLocaleString('en-IN')}.`
+        : 'Direct owner / zero brokerage listing.',
+    facilities,
+    images: photoRefs,
+    submitterRole: draft.submitterRole,
+    workflowStatus: publishMode as WorkflowStatus,
+    submittedAt: serverTimestamp(),
+    approvedAt: isPublicListing ? serverTimestamp() : null,
+    updatedAt: serverTimestamp(),
+  };
+
+  try {
+    const batch = writeBatch(db);
+    batch.set(doc(db, SUBMISSIONS_COLLECTION, propertyCode), {
+      ...commonFields,
+      submitterName,
+      submitterMobile,
+      submitterWhatsapp,
+      rejectionReason: null,
+    });
+
+    if (isPublicListing) {
+      batch.set(doc(db, PUBLIC_COLLECTION, propertyCode), {
+        ...commonFields,
+        availabilityLabel: 'Available',
+      });
+    }
+
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, `${SUBMISSIONS_COLLECTION}/${propertyCode}`);
+  }
+
+  await createAdminAuditNotification(
+    isPublicListing ? 'approved' : 'submission',
+    propertyCode,
+    isPublicListing
+      ? `AI Assistant added & published ${propertyCode}`
+      : `AI Assistant saved ${propertyCode} (Pending)`,
+    `${title} in ${cleanLocation} at ₹${monthlyRent.toLocaleString('en-IN')}/month (${photoRefs.length} photo${photoRefs.length === 1 ? '' : 's'}).`
+  );
+
+  return {
+    propertyCode,
+    workflowStatus: publishMode,
+    photoCount: photoRefs.length,
+    title,
+  };
+}
+

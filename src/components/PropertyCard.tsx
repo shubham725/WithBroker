@@ -11,13 +11,12 @@ import {
   ShieldCheck,
   Sofa,
 } from 'lucide-react';
-import { WEBSITE_URL } from '../data/properties';
 import { PropertyListing } from '../types/property';
 import {
   buildWhatsAppInquiryUrl,
   formatDepositLabel,
   formatINR,
-  getPropertyDirectUrl,
+  getPublicPropertyShareUrl,
   isPropertyRentedOut,
 } from '../utils/propertyLogic';
 import { SafeImage } from './SafeImage';
@@ -42,10 +41,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const images = property.images.length > 0 ? property.images : [''];
   const currentImg = images[photoIdx] ?? images[0];
 
-  const pageUrl =
-    typeof window !== 'undefined'
-      ? getPropertyDirectUrl(window.location.href, property.id)
-      : getPropertyDirectUrl(WEBSITE_URL, property.id);
+  const pageUrl = getPublicPropertyShareUrl(property.propertyCode || property.id);
   const whatsAppUrl = buildWhatsAppInquiryUrl(property, pageUrl);
 
   const handlePrevPhoto = (e: React.MouseEvent) => {
