@@ -37,15 +37,15 @@ interface LocationPickerFieldProps {
   onChange: (next: LocationValue) => void;
 }
 
-const PUNE_CENTER = { lat: 18.5529, lng: 73.9277 };
+const PUNE_CENTER = { lat: 18.5204, lng: 73.8567 };
 
 const QUICK_PUNE_AREAS: Array<{ label: string; full: string; lat: number; lng: number }> = [
-  { label: 'Viman Nagar', full: 'Viman Nagar, Pune', lat: 18.5679, lng: 73.9143 },
-  { label: 'Wadgaon Sheri', full: 'Wadgaon Sheri, Pune', lat: 18.5529, lng: 73.9277 },
-  { label: 'Somnath Nagar', full: 'Somnath Nagar, Wadgaon Sheri, Pune', lat: 18.5565, lng: 73.9306 },
+  { label: 'Baner', full: 'Baner, Pune', lat: 18.559, lng: 73.7868 },
+  { label: 'Kothrud', full: 'Kothrud, Pune', lat: 18.5074, lng: 73.8077 },
+  { label: 'Wakad', full: 'Wakad, Pune', lat: 18.5975, lng: 73.764 },
+  { label: 'Hinjewadi', full: 'Hinjewadi, Pune', lat: 18.5913, lng: 73.7389 },
   { label: 'Kharadi', full: 'Kharadi, Pune', lat: 18.5515, lng: 73.9475 },
-  { label: 'Keshav Nagar', full: 'Keshav Nagar, Mundhwa, Pune', lat: 18.5337, lng: 73.9521 },
-  { label: 'Wanowrie', full: 'Wanowrie, Pune', lat: 18.4976, lng: 73.9036 },
+  { label: 'Viman Nagar', full: 'Viman Nagar, Pune', lat: 18.5679, lng: 73.9143 },
 ];
 
 async function reverseGeocodeFallback(lat: number, lng: number): Promise<string | null> {
@@ -398,7 +398,7 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
           onBlur={() => {
             window.setTimeout(() => setDropdownOpen(false), 180);
           }}
-          placeholder="Search Google address or type area (e.g. Viman Nagar, Pune)"
+          placeholder="Search Google address or type any area (e.g. Baner, Kothrud, Kharadi, Pune)"
           aria-invalid={Boolean(error)}
           className="h-11 w-full rounded-xl border border-transparent bg-[#F4F4F7] pl-10 pr-9 text-base text-[#090A14] placeholder:text-[#8A8C9B] transition-colors hover:bg-[#EEEEF3] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
         />

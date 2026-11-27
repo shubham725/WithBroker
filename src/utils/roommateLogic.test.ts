@@ -18,6 +18,8 @@ import {
   filterAndSortRoommates,
   generateAutoRoommateDescription,
   getActivePublicRoommates,
+  getPublicRoommateShareUrl,
+  getRoommateDirectUrl,
   isRoommateListingExpired,
   sanitizeRoommateForPublic,
   validateRoommateSubmission,
@@ -363,13 +365,22 @@ test('buildRoommateWhatsAppUrl targets 9834626078 with exact pre-filled Listing 
       shiftingNow: true,
     })
   );
+  assert.equal(
+    getRoommateDirectUrl('https://withbroker.vercel.app/', 'WB-RM-1001'),
+    'https://withbroker.vercel.app/roommate/WB-RM-1001'
+  );
+  assert.equal(
+    getPublicRoommateShareUrl('WB-RM-1001'),
+    'https://withbroker.vercel.app/roommate/WB-RM-1001'
+  );
   assert.ok(shareText.includes('1 MALE ROOMMATE REQUIRED Urgently'));
   assert.ok(shareText.includes('Karve Nagar'));
   assert.ok(shareText.includes('Shared separately'));
   assert.ok(shareText.includes('Parking Available'));
   assert.ok(shareText.includes('Available for shifting now'));
   assert.ok(shareText.includes('WB-RM-1001'));
-  assert.ok(shareText.includes('https://withbroker.vercel.app/'));
+  assert.ok(shareText.includes('View on WithBroker:\nhttps://withbroker.vercel.app/roommate/WB-RM-1001'));
+  assert.equal(shareText.includes('withbroker.vercel.app//'), false);
 });
 
 test('filterAndSortRoommates filters accurately by Pre-Occupied Flat vs New Flat', () => {

@@ -56,7 +56,10 @@ import {
   formatINR,
   getOwnerSubmissionShareUrl,
 } from '../utils/propertyLogic';
-import { listAllAdminRoommatesAndReports } from '../lib/roommateRepo';
+import {
+  ensureInitialRoommatesSeededByAdmin,
+  listAllAdminRoommatesAndReports,
+} from '../lib/roommateRepo';
 import { AdminAiChatbot } from './AdminAiChatbot';
 import { AdminRoommatePanel } from './AdminRoommatePanel';
 import { SafeImage } from './SafeImage';
@@ -143,7 +146,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setLoading(true);
     setErrorBanner(null);
     try {
-      await ensureInitialCatalogSeededByAdmin();
+      await Promise.all([
+        ensureInitialCatalogSeededByAdmin(),
+        ensureInitialRoommatesSeededByAdmin(),
+      ]);
       const [propData, notifData, rmData] = await Promise.all([
         listAdminSubmissionsAndStats(),
         listAdminNotificationsFromFirestore(),

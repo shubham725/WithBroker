@@ -34,6 +34,7 @@ import { filterProperties } from './utils/propertyLogic';
 import {
   buildRoommateShareText,
   buildRoommateShareWhatsAppUrl,
+  getPublicRoommateShareUrl,
 } from './utils/roommateLogic';
 import {
   applyClientDocumentMetadata,
@@ -71,6 +72,9 @@ function WithBrokerAppContent() {
   const [view, setView] = useState<'public' | 'admin' | 'owner-form'>(() => initialRoute.view);
   const [requestedPropertyId, setRequestedPropertyId] = useState<string | null>(
     () => initialRoute.propertyId
+  );
+  const [requestedRoommateId, setRequestedRoommateId] = useState<string | null>(
+    () => initialRoute.roommateId
   );
   const [routeNotice, setRouteNotice] = useState<string | null>(() =>
     initialRoute.isUnknownRoute
@@ -184,8 +188,12 @@ function WithBrokerAppContent() {
       const next = readBrowserRoute();
       setView(next.view);
       setRequestedPropertyId(next.propertyId);
+      setRequestedRoommateId(next.roommateId);
       if (!next.propertyId) {
         setSelectedProperty(null);
+      }
+      if (!next.roommateId) {
+        setSelectedRoommate(null);
       }
       if (next.openPostModal) {
         setPostModalOpen(true);
@@ -266,13 +274,55 @@ function WithBrokerAppContent() {
     }
   }, [requestedPropertyId, allProperties, loadingListings]);
 
+  // Resolve /roommate/:code and ?roommate=:code deep links cleanly; redirect gracefully if listing does not exist
+  useEffect(() => {
+    if (!requestedRoommateId) return;
+    const targetLower = requestedRoommateId.trim().toLowerCase();
+    const found = allRoommates.find(
+      (r) =>
+        r.listingCode.toLowerCase() === targetLower ||
+        r.id.toLowerCase() === targetLower
+    );
+
+    if (found) {
+      setSelectedRoommate(found);
+      setRouteNotice(null);
+      if (
+        typeof window !== 'undefined' &&
+        (window.location.search.includes('roommate=') ||
+          window.location.pathname.toLowerCase().startsWith('/roommates/'))
+      ) {
+        const canonicalPath = `/roommate/${encodeURIComponent(found.listingCode)}`;
+        window.history.replaceState(null, '', canonicalPath);
+      }
+      return;
+    }
+
+    if (!loadingRoommates) {
+      setSelectedRoommate(null);
+      setRequestedRoommateId(null);
+      setRouteNotice(
+        `Roommate listing "${requestedRoommateId}" is no longer available — browse active Pune vacancies below.`
+      );
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', '/');
+      }
+    }
+  }, [requestedRoommateId, allRoommates, loadingRoommates]);
+
   // Dynamically update document.title, OpenGraph tags, Twitter Card, canonical URL, and JSON-LD
   useEffect(() => {
-    applyClientDocumentMetadata(view === 'public' ? selectedProperty : null, view);
-  }, [selectedProperty, view]);
+    applyClientDocumentMetadata(
+      view === 'public' ? selectedProperty : null,
+      view,
+      view === 'public' ? selectedRoommate : null
+    );
+  }, [selectedProperty, selectedRoommate, view]);
 
   const handleOpenPropertyDetails = (property: PropertyListing) => {
     const code = property.propertyCode || property.id;
+    setSelectedRoommate(null);
+    setRequestedRoommateId(null);
     setSelectedProperty(property);
     setRequestedPropertyId(code);
     setRouteNotice(null);
@@ -291,6 +341,35 @@ function WithBrokerAppContent() {
       if (
         window.location.pathname.startsWith('/property/') ||
         window.location.search.includes('flat=')
+      ) {
+        window.history.replaceState(null, '', '/');
+      }
+    }
+  };
+
+  const handleOpenRoommateDetails = (listing: PublicRoommateListing) => {
+    const code = listing.listingCode || listing.id;
+    setSelectedProperty(null);
+    setRequestedPropertyId(null);
+    setSelectedRoommate(listing);
+    setRequestedRoommateId(code);
+    setRouteNotice(null);
+    if (typeof window !== 'undefined') {
+      const targetPath = `/roommate/${encodeURIComponent(code)}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState(null, '', targetPath);
+      }
+    }
+  };
+
+  const handleCloseRoommateDetails = () => {
+    setSelectedRoommate(null);
+    setRequestedRoommateId(null);
+    if (typeof window !== 'undefined') {
+      if (
+        window.location.pathname.toLowerCase().startsWith('/roommate/') ||
+        window.location.pathname.toLowerCase().startsWith('/roommates/') ||
+        window.location.search.includes('roommate=')
       ) {
         window.history.replaceState(null, '', '/');
       }
@@ -355,19 +434,21 @@ function WithBrokerAppContent() {
   };
 
   const handleShareRoommateListing = async (listing: PublicRoommateListing) => {
-    const text = buildRoommateShareText(listing);
+    const directUrl = getPublicRoommateShareUrl(listing.listingCode);
+    const text = buildRoommateShareText(listing, directUrl);
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({
           title: `WithBroker Roommate Listing (${listing.listingCode})`,
           text,
+          url: directUrl,
         });
         return;
       }
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
         await navigator.clipboard.writeText(text);
         showShareToast(
-          `Roommate post (${listing.listingCode}) copied! Paste it into WhatsApp or Telegram.`
+          `Roommate post with direct link (${listing.listingCode}) copied!`
         );
         return;
       }
@@ -440,7 +521,7 @@ function WithBrokerAppContent() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#F9F8FC] text-[#090A14]">
+    <div className="flex min-h-screen flex-col bg-[#F9F7FD] text-[#140A29]">
       {mapsQuotaExceeded && (
         <div
           role="status"
@@ -524,17 +605,17 @@ function WithBrokerAppContent() {
         />
 
         {loadError ? (
-          <section id="flats" className="bg-[#F9F8FC] py-12">
+          <section id="flats" className="bg-[#F9F7FD] py-12">
             <div className="mx-auto max-w-2xl px-4 text-center">
               <div className="rounded-2xl border border-red-200 bg-white p-8 shadow-xs">
-                <h2 className="font-display text-lg font-bold text-[#090A14]">
+                <h2 className="font-display text-lg font-bold text-[#140A29]">
                   Unable to Load Rental Flats
                 </h2>
-                <p className="mt-1.5 text-sm text-[#656275]">{loadError}</p>
+                <p className="mt-1.5 text-sm text-[#544E66]">{loadError}</p>
                 <button
                   type="button"
                   onClick={triggerPublicRefresh}
-                  className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[#6B1CD4] px-5 text-sm font-semibold text-white hover:bg-[#5412AD]"
+                  className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-5 text-sm font-semibold text-white hover:from-[#6B1CD4] hover:to-[#4E11A8]"
                 >
                   <RefreshCw className="h-4 w-4" />
                   <span>Try Again</span>
@@ -543,10 +624,10 @@ function WithBrokerAppContent() {
             </div>
           </section>
         ) : loadingListings && allProperties.length === 0 ? (
-          <section id="flats" className="bg-[#F9F8FC] py-14">
+          <section id="flats" className="bg-[#F9F7FD] py-14">
             <div className="mx-auto flex max-w-7xl flex-col items-center justify-center gap-3 px-4 text-center">
               <Loader2 className="h-7 w-7 animate-spin text-[#6B1CD4]" />
-              <p className="text-sm font-medium text-[#656275]">
+              <p className="text-sm font-medium text-[#544E66]">
                 Loading verified Pune rental listings...
               </p>
             </div>
@@ -570,7 +651,7 @@ function WithBrokerAppContent() {
           allRoommates={allRoommates}
           loading={loadingRoommates}
           externalFilterPreset={roommateFilterPreset}
-          onViewDetails={(listing) => setSelectedRoommate(listing)}
+          onViewDetails={handleOpenRoommateDetails}
           onShareListing={(listing) => void handleShareRoommateListing(listing)}
           onOpenPostRoommate={handleOpenPostRoommate}
           onOpenMyRoommates={() => setMyRoommatesOpen(true)}
@@ -614,7 +695,7 @@ function WithBrokerAppContent() {
 
       <RoommateDetailModal
         listing={selectedRoommate}
-        onClose={() => setSelectedRoommate(null)}
+        onClose={handleCloseRoommateDetails}
       />
 
       <PostRoommateModal

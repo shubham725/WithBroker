@@ -102,7 +102,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           />
           <path
             d="M0,30 C240,94 600,102 960,68 C1190,46 1355,48 1440,66 L1440,110 L0,110 Z"
-            fill="#F8F8FA"
+            fill="#F9F7FD"
           />
         </svg>
       </div>
@@ -125,9 +125,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </h1>
 
           {/* Subtitle */}
-          <p className="mt-4 max-w-[465px] text-sm leading-relaxed text-[#4E4A5E] sm:text-[15.5px]">
-            Explore available 1RK, 1BHK, 2BHK apartments in Viman Nagar, Wadgaon Sheri, Somnath
-            Nagar and nearby areas.
+          <p className="mt-4 max-w-[475px] text-sm leading-relaxed text-[#4E4A5E] sm:text-[15.5px]">
+            Explore verified 1RK, 1BHK, 2BHK, and 3BHK rental apartments across Pune with
+            transparent rent, deposit, and direct WhatsApp connect.
           </p>
 
           {/* 3 Clean Trust Indicators */}

@@ -8,6 +8,7 @@ import {
   WHATSAPP_COMMUNITY_URL,
 } from '../data/properties';
 import {
+  buildDynamicLocalities,
   buildEmailSharePostUrl,
   buildOwnerContactWhatsAppUrl,
   buildPropertyShareText,
@@ -26,10 +27,17 @@ import {
   getOwnerSubmissionShareUrl,
   getPropertyDirectUrl,
   getPublicPropertyShareUrl,
+  inferAreaMeta,
   isPropertyRentedOut,
   validateSubmissionForm,
 } from './propertyLogic';
-import { injectPropertyOgIntoHtml, type OgPropertyData } from '../lib/propertyOg';
+import {
+  injectPropertyOgIntoHtml,
+  injectRoommateOgIntoHtml,
+  type OgPropertyData,
+  type OgRoommateData,
+} from '../lib/propertyOg';
+import { BASELINE_ROOMMATE_LISTINGS } from '../data/roommates';
 import { PropertySubmissionInput } from '../types/property';
 
 test('getActiveListings excludes rented or inactive properties', () => {
@@ -161,17 +169,20 @@ test('buildOwnerContactWhatsAppUrl builds direct admin-to-owner WhatsApp link', 
   assert.ok(decoded.includes('Property ID: WB-1010'));
 });
 
-test('buildPropertyShareText includes Property ID, group name, group link, and website link', () => {
+test('buildPropertyShareText includes Property ID, direct flat link, group name, and group link', () => {
   const prop = SAMPLE_PROPERTIES[0];
-  const propUrl = 'https://withbroker.vercel.app/?flat=WB-1001#flats';
+  const propUrl = 'https://withbroker.vercel.app/property/WB-1001';
   const ad = buildPropertyShareText(prop, propUrl);
   assert.ok(ad.includes('🆔 Property ID: WB-1001'));
+  assert.ok(ad.includes(`🔗 View Flat on WithBroker: ${propUrl}`));
   assert.ok(ad.includes(`👥 WhatsApp Group — ${WHATSAPP_COMMUNITY_NAME}:`));
   assert.ok(ad.includes(WHATSAPP_COMMUNITY_URL));
-  assert.ok(ad.includes(`🌐 Website: ${WEBSITE_URL}`));
-  assert.ok(!ad.includes('🔗 Property Link:'));
-  assert.ok(!ad.includes('/property/'));
+  assert.equal(ad.includes('withbroker.vercel.app//'), false);
   assert.ok(ad.includes('WITHBROKER • RENT • SEARCH • CONNECT'));
+
+  // Default call without explicit URL also embeds the canonical per-flat deep link
+  const adDefault = buildPropertyShareText(prop);
+  assert.ok(adDefault.includes('https://withbroker.vercel.app/property/WB-1001'));
 
   assert.ok(buildTelegramSharePostUrl(ad, propUrl).startsWith('https://t.me/share/url?url='));
   assert.ok(buildSmsSharePostUrl(ad).startsWith('sms:?&body='));
@@ -272,8 +283,7 @@ test('getPropertyDirectUrl, buildWhatsAppPropertyShareText, and injectPropertyOg
   assert.ok(waShare.includes(`🆔 Property ID: ${flatA.propertyCode}`));
   assert.ok(waShare.includes('💰 Rent: ₹21,000/month'));
   assert.ok(waShare.includes('📍 Location: Near Phoenix Mall, Wadgaon Sheri, Pune'));
-  assert.ok(waShare.includes(`View full details and photos:\n${WEBSITE_URL}`));
-  assert.ok(!waShare.includes('/property/WB-1001'));
+  assert.ok(waShare.includes('View full details and photos:\nhttps://withbroker.vercel.app/property/WB-1001'));
   assert.ok(waShare.includes('Listed on WITHBROKER'));
 
   const baseHtml = '<!doctype html><html><head><title>Old</title><meta property="og:title" content="Old" /></head><body><div id="root"></div></body></html>';
@@ -410,7 +420,143 @@ test('parseAppRoute handles /property/:id deep links, known routes, and 404 path
   const homeMeta = buildClientPageMetadata(null, 'public', 'https://withbroker.vercel.app');
   assert.equal(homeMeta.ogUrl, 'https://withbroker.vercel.app/');
   assert.equal(homeMeta.ogImage, 'https://withbroker.vercel.app/assets/properties/flat-1/photo-1.jpeg');
+  assert.ok(!homeMeta.title.includes('Viman Nagar'));
+  assert.ok(!homeMeta.description.includes('Viman Nagar'));
+
+  // Roommate deep links (/roommate/:code, /roommates/:code, ?roommate=:code)
+  const rmRoute = parseAppRoute('/roommate/WB-RM-1001', '', '');
+  assert.equal(rmRoute.view, 'public');
+  assert.equal(rmRoute.roommateId, 'WB-RM-1001');
+  assert.equal(rmRoute.isUnknownRoute, false);
+
+  const rmPluralRoute = parseAppRoute('/roommates/WB-RM-1001', '', '');
+  assert.equal(rmPluralRoute.roommateId, 'WB-RM-1001');
+  assert.equal(rmPluralRoute.isUnknownRoute, false);
+
+  const rmQueryRoute = parseAppRoute('/', '?roommate=WB-RM-1001', '#roommates');
+  assert.equal(rmQueryRoute.roommateId, 'WB-RM-1001');
+  assert.equal(rmQueryRoute.isUnknownRoute, false);
+
+  const baselineRm = BASELINE_ROOMMATE_LISTINGS[0];
+  const rmMeta = buildClientPageMetadata(null, 'public', 'https://withbroker.vercel.app', baselineRm);
+  assert.equal(rmMeta.ogUrl, 'https://withbroker.vercel.app/roommate/WB-RM-1001');
+  assert.ok(rmMeta.ogTitle.includes('1 Female Roommate Required'));
+  assert.ok(rmMeta.ogDescription.includes('₹6,000/person'));
+  assert.equal(
+    rmMeta.ogImage,
+    'https://withbroker.vercel.app/assets/aistudio/6255714068601705157_c9b15d20.jpg'
+  );
+
+  // Server-side roommate OG injection
+  const rmOgData: OgRoommateData = {
+    listingCode: baselineRm.listingCode,
+    roomType: baselineRm.roomType,
+    flatOccupancy: baselineRm.flatOccupancy || 'Pre-Occupied Flat',
+    location: baselineRm.location,
+    publicBuildingName: baselineRm.publicBuildingName || '',
+    rent: baselineRm.rent,
+    deposit: baselineRm.deposit,
+    furnishing: baselineRm.furnishing,
+    preferredGender: baselineRm.preferredGender,
+    peopleRequired: baselineRm.peopleRequired,
+    urgent: Boolean(baselineRm.urgent),
+    status: baselineRm.status,
+    description: baselineRm.description,
+    firstImage: baselineRm.images[0] || '',
+    updatedAtVersion: '',
+  };
+  const rmHtml = injectRoommateOgIntoHtml(
+    '<!doctype html><html><head><title>Default</title></head><body><div id="root"></div></body></html>',
+    rmOgData,
+    'https://withbroker.vercel.app'
+  );
+  assert.ok(rmHtml.includes('property="og:url" content="https://withbroker.vercel.app/roommate/WB-RM-1001"'));
+  assert.ok(rmHtml.includes('1 Female Roommate Required'));
+  assert.ok(rmHtml.includes('/assets/aistudio/6255714068601705157_c9b15d20.jpg'));
 });
+
+test('buildDynamicLocalities derives areas strictly from actual flats data with zero hardcoded defaults and supports all Pune areas plus future cities', () => {
+  // 1. Empty flats data -> zero area cards (no hardcoded Viman Nagar / Wadgaon Sheri / Somnath Nagar)
+  assert.deepEqual(buildDynamicLocalities([]), []);
+
+  // 2. Sample properties -> only areas that actually exist in active flats data, sorted by available count descending
+  const sampleLocs = buildDynamicLocalities(SAMPLE_PROPERTIES);
+  const sampleSlugs = sampleLocs.map((l) => l.slug);
+  assert.equal(sampleSlugs.includes('viman-nagar'), false);
+  assert.equal(sampleSlugs.includes('somnath-nagar'), false);
+  assert.equal(sampleSlugs[0], 'wadgaon-sheri');
+  assert.ok(sampleSlugs.includes('keshav-nagar'));
+  assert.ok(sampleSlugs.includes('wanowrie'));
+
+  // 3. Flats across wider Pune (Baner, Kothrud, Karve Nagar) and future expansion outside Pune (Andheri West, Mumbai)
+  const baseFlat = SAMPLE_PROPERTIES[0];
+  const customFlats = [
+    {
+      ...baseFlat,
+      id: 'p-baner-1',
+      propertyCode: 'WB-2001',
+      locality: 'High Street, Baner, Pune',
+      subLocality: 'Baner',
+      localitySlug: 'baner',
+    },
+    {
+      ...baseFlat,
+      id: 'p-baner-2',
+      propertyCode: 'WB-2002',
+      locality: 'Pancard Club Road, Baner, Pune',
+      subLocality: 'Baner',
+      localitySlug: 'baner',
+    },
+    {
+      ...baseFlat,
+      id: 'p-karve-1',
+      propertyCode: 'WB-2003',
+      locality: 'Lane No. 8, Canal Road, Karve Nagar, Pune',
+      subLocality: 'Karve Nagar',
+      localitySlug: 'other',
+    },
+    {
+      ...baseFlat,
+      id: 'p-mumbai-1',
+      propertyCode: 'WB-2004',
+      locality: 'Lokhandwala, Andheri West, Mumbai 400053',
+      subLocality: 'Andheri West',
+      localitySlug: 'other',
+    },
+  ];
+
+  const dynamicLocs = buildDynamicLocalities(customFlats);
+  assert.deepEqual(
+    dynamicLocs.map((l) => l.name),
+    ['Baner', 'Andheri West', 'Karve Nagar']
+  );
+
+  // Filtering by a dynamically inferred 'other' slug matches ONLY that exact area without colliding
+  const karveFiltered = filterProperties(
+    customFlats,
+    { location: 'karve-nagar', propertyType: 'all', maxRent: null },
+    dynamicLocs
+  );
+  assert.deepEqual(
+    karveFiltered.map((p) => p.id),
+    ['p-karve-1']
+  );
+
+  const mumbaiFiltered = filterProperties(
+    customFlats,
+    { location: 'andheri-west', propertyType: 'all', maxRent: null },
+    dynamicLocs
+  );
+  assert.deepEqual(
+    mumbaiFiltered.map((p) => p.id),
+    ['p-mumbai-1']
+  );
+
+  assert.equal(inferAreaMeta('Paud Road, Kothrud, Pune').label, 'Kothrud');
+  assert.equal(inferAreaMeta('Hinjewadi Phase 2, Pune').slug, 'hinjewadi');
+  assert.equal(inferAreaMeta('Whitefield, Bengaluru').slug, 'whitefield');
+});
+
 
 
 

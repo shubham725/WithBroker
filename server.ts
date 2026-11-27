@@ -7,7 +7,9 @@ import dotenv from 'dotenv';
 import {
   fetchPublicPhotoBytes,
   fetchPublicPropertyForOg,
+  fetchPublicRoommateForOg,
   injectPropertyOgIntoHtml,
+  injectRoommateOgIntoHtml,
   resolveRequestOrigin,
 } from './src/lib/propertyOg.ts';
 import {
@@ -629,6 +631,27 @@ async function startServer() {
       }
     });
 
+    app.get(['/roommate/:listingCode', '/roommates/:listingCode'], async (req, res, next) => {
+      try {
+        const listingCode = String(req.params.listingCode || '').trim();
+        const origin = resolveRequestOrigin(req.headers);
+        const templatePath = path.resolve(__dirname, 'index.html');
+        let html = fs.readFileSync(templatePath, 'utf-8');
+        const roommate = await fetchPublicRoommateForOg(listingCode);
+        if (roommate) {
+          html = injectRoommateOgIntoHtml(html, roommate, origin);
+        }
+        html = await vite.transformIndexHtml(req.originalUrl, html);
+        res.status(200).set({
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=0, s-maxage=300',
+        });
+        return res.send(html);
+      } catch (err) {
+        return next(err);
+      }
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.resolve(__dirname, 'dist');
@@ -640,6 +663,20 @@ async function startServer() {
       const property = await fetchPublicPropertyForOg(propertyId);
       const html = property
         ? injectPropertyOgIntoHtml(distIndexHtml, property, origin)
+        : distIndexHtml;
+      res.status(200).set({
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=0, s-maxage=300, stale-while-revalidate=600',
+      });
+      return res.send(html);
+    });
+
+    app.get(['/roommate/:listingCode', '/roommates/:listingCode'], async (req, res) => {
+      const listingCode = String(req.params.listingCode || '').trim();
+      const origin = resolveRequestOrigin(req.headers);
+      const roommate = await fetchPublicRoommateForOg(listingCode);
+      const html = roommate
+        ? injectRoommateOgIntoHtml(distIndexHtml, roommate, origin)
         : distIndexHtml;
       res.status(200).set({
         'Content-Type': 'text/html; charset=utf-8',

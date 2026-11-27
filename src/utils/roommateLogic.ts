@@ -330,8 +330,27 @@ export function buildRoommateAdminContactUrl(
   return `https://wa.me/${target}?text=${encodeURIComponent(message)}`;
 }
 
+export function getRoommateDirectUrl(baseUrl: string, listingCode: string): string {
+  const cleanCode = encodeURIComponent(listingCode.trim());
+  try {
+    const parsed = new URL(baseUrl);
+    return `${parsed.origin}/roommate/${cleanCode}`;
+  } catch {
+    const cleanBase = baseUrl.split('#')[0].split('?')[0].replace(/\/+$/, '');
+    return `${cleanBase}/roommate/${cleanCode}`;
+  }
+}
+
 /**
- * Shareable Telegram/WhatsApp-style vacancy post using the WithBroker domain.
+ * Always produces the canonical live Vercel direct roommate listing share URL:
+ * https://withbroker.vercel.app/roommate/<listingCode>
+ */
+export function getPublicRoommateShareUrl(listingCode: string): string {
+  return getRoommateDirectUrl(WEBSITE_URL, listingCode);
+}
+
+/**
+ * Shareable Telegram/WhatsApp-style vacancy post with direct listing link on WithBroker.
  */
 export function buildRoommateShareText(
   listing: Pick<
@@ -355,7 +374,8 @@ export function buildRoommateShareText(
     | 'showPublicContact'
     | 'publicWhatsappNumber'
     | 'publicSecondaryContact'
-  >
+  >,
+  listingUrl?: string
 ): string {
   const genderHeading =
     listing.preferredGender === 'Any'
@@ -367,6 +387,7 @@ export function buildRoommateShareText(
     .filter(Boolean)
     .join(', ');
   const occupancy = listing.flatOccupancy || 'Pre-Occupied Flat';
+  const directUrl = listingUrl?.trim() || getPublicRoommateShareUrl(listing.listingCode);
 
   const lines: string[] = [
     headline,
@@ -408,7 +429,7 @@ export function buildRoommateShareText(
   lines.push(
     '',
     'View on WithBroker:',
-    `${WEBSITE_URL}/`,
+    directUrl,
     '',
     'WITHBROKER — RENT • SEARCH • CONNECT'
   );
@@ -417,9 +438,10 @@ export function buildRoommateShareText(
 }
 
 export function buildRoommateShareWhatsAppUrl(
-  listing: Parameters<typeof buildRoommateShareText>[0]
+  listing: Parameters<typeof buildRoommateShareText>[0],
+  listingUrl?: string
 ): string {
-  return `https://wa.me/?text=${encodeURIComponent(buildRoommateShareText(listing))}`;
+  return `https://wa.me/?text=${encodeURIComponent(buildRoommateShareText(listing, listingUrl))}`;
 }
 
 export function formatRoommateDate(dateStr: string): string {

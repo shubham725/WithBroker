@@ -216,7 +216,7 @@ export async function verifySoleAdminFirebaseToken(
   }
 }
 
-const SYSTEM_INSTRUCTION = `You are the WithBroker Admin AI Listing Assistant for Pune rental properties (Viman Nagar, Wadgaon Sheri, Somnath Nagar, Kharadi, Keshav Nagar, Wanowrie, Kalyani Nagar, and nearby Pune areas).
+const SYSTEM_INSTRUCTION = `You are the WithBroker Admin AI Listing Assistant for rental properties across Pune (and expanding locations across India).
 
 Your job:
 1. Help the WithBroker admin quickly add rental flat listings by parsing ANY flat details the admin types or pastes (including messy WhatsApp messages, Hinglish, bullet lists, or short notes) AND inspecting any flat photos attached in the message.

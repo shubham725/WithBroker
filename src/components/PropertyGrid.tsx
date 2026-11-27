@@ -130,15 +130,15 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
   const rentedCount = properties.length - availableCount;
 
   return (
-    <section id="flats" className="scroll-mt-24 bg-[#F8F8FA] pt-2 pb-12 sm:pb-16">
+    <section id="flats" className="scroll-mt-24 bg-[#F9F7FD] pt-2 pb-14 sm:pb-18">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         {/* Section Header + Clean Segmented BHK Filter */}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="font-display text-2xl font-bold tracking-[-0.02em] text-[#090A14] sm:text-[28px]">
-              Available Rental Flats
+            <h2 className="font-display text-2xl font-bold tracking-[-0.02em] text-[#140A29] sm:text-[28px]">
+              Available <span className="text-[#6B1CD4]">Rental Flats</span>
             </h2>
-            <p className="mt-1 text-xs sm:text-sm text-[#5C5E6B]">
+            <p className="mt-1 text-xs sm:text-sm text-[#544E66]">
               Verified apartments with upfront rent, deposit, and brokerage details.
             </p>
           </div>
@@ -146,7 +146,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
           <div
             role="group"
             aria-label="Filter by property type"
-            className="no-scrollbar inline-flex flex-nowrap items-center gap-0.5 self-start overflow-x-auto rounded-xl bg-[#ECECF2] p-1 md:self-auto"
+            className="no-scrollbar inline-flex flex-nowrap items-center gap-1 self-start overflow-x-auto rounded-xl border border-[#6B1CD4]/12 bg-[#EFE8FC] p-1 md:self-auto"
           >
             {PROPERTY_TYPE_TABS.map((tab) => {
               const isActive = filters.propertyType === tab.value;
@@ -162,8 +162,8 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                   }
                   className={`inline-flex min-h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg px-3.5 text-xs sm:text-[13px] font-semibold transition-all duration-150 ${
                     isActive
-                      ? 'bg-white text-[#090A14] shadow-2xs'
-                      : 'text-[#5C5E6B] hover:text-[#090A14]'
+                      ? 'bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] text-white shadow-[0_6px_14px_-6px_rgba(107,28,212,0.55)]'
+                      : 'text-[#544E66] hover:text-[#6B1CD4]'
                   }`}
                 >
                   {tab.label}
@@ -174,19 +174,19 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
         </div>
 
         {/* Clean Single-Line Marketplace Utility Bar */}
-        <div className="mt-5 rounded-2xl border border-[#090A14]/9 bg-white px-4 py-3">
+        <div className="mt-5 rounded-2xl border border-[#6B1CD4]/14 bg-white px-4 py-3 shadow-[0_12px_28px_-20px_rgba(95,24,200,0.20)]">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Left: Live Count & Active Area */}
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5E6B]">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#544E66]">
               <span
                 data-testid="listings-count"
-                className="font-semibold text-[#090A14] tabular-nums"
+                className="font-semibold text-[#140A29] tabular-nums"
               >
                 {availableCount} {availableCount === 1 ? 'Flat' : 'Flats'} Available
               </span>
               {rentedCount > 0 && (
                 <>
-                  <span aria-hidden="true" className="text-[#090A14]/20">
+                  <span aria-hidden="true" className="text-[#6B1CD4]/30">
                     ·
                   </span>
                   <span className="font-medium text-[#B91C1C] tabular-nums">
@@ -196,7 +196,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
               )}
               {activeLocalityName && (
                 <>
-                  <span aria-hidden="true" className="text-[#090A14]/20">
+                  <span aria-hidden="true" className="text-[#6B1CD4]/30">
                     ·
                   </span>
                   <span className="font-semibold text-[#6B1CD4]">{activeLocalityName}</span>
@@ -222,11 +222,11 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                 onClick={() => setShowFilters((prev) => !prev)}
                 className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition-colors ${
                   showFilters || extraFilterCount > 0
-                    ? 'border-[#6B1CD4] bg-[#F7F3FD] text-[#6B1CD4]'
-                    : 'border-[#090A14]/12 bg-white text-[#090A14] hover:border-[#090A14]/30'
+                    ? 'border-[#6B1CD4] bg-[#F5EEFF] text-[#6B1CD4]'
+                    : 'border-[#6B1CD4]/18 bg-white text-[#140A29] hover:border-[#6B1CD4]/45 hover:bg-[#F9F7FD]'
                 }`}
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                <SlidersHorizontal className="h-3.5 w-3.5 text-[#6B1CD4]" aria-hidden="true" />
                 <span>Filters</span>
                 {extraFilterCount > 0 && (
                   <span className="tabular-nums">({extraFilterCount})</span>
@@ -238,7 +238,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                   Sort Properties
                 </label>
                 <ArrowUpDown
-                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#5C5E6B]"
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B1CD4]"
                   aria-hidden="true"
                 />
                 <select
@@ -250,7 +250,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                       sortBy: e.target.value as SortOrder,
                     })
                   }
-                  className="h-9 rounded-lg border border-[#090A14]/12 bg-white pl-8 pr-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
+                  className="h-9 rounded-lg border border-[#6B1CD4]/18 bg-white pl-8 pr-3 text-xs font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4]/45 focus:border-[#6B1CD4] focus:outline-none"
                 >
                   {SORT_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -272,10 +272,13 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                 className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition-colors ${
                   onlyAvailableValue
                     ? 'border-[#16A34A] bg-[#16A34A] text-white'
-                    : 'border-[#090A14]/12 bg-white text-[#090A14] hover:border-[#090A14]/30'
+                    : 'border-[#6B1CD4]/18 bg-white text-[#140A29] hover:border-[#6B1CD4]/45 hover:bg-[#F9F7FD]'
                 }`}
               >
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                <CheckCircle2
+                  className={`h-3.5 w-3.5 ${onlyAvailableValue ? 'text-white' : 'text-[#6B1CD4]'}`}
+                  aria-hidden="true"
+                />
                 <span>Available Only</span>
               </button>
 
@@ -290,12 +293,14 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                 }
                 className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition-colors ${
                   onlySavedValue
-                    ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white'
-                    : 'border-[#090A14]/12 bg-white text-[#090A14] hover:border-[#090A14]/30'
+                    ? 'border-[#6B1CD4] bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] text-white'
+                    : 'border-[#6B1CD4]/18 bg-white text-[#140A29] hover:border-[#6B1CD4]/45 hover:bg-[#F9F7FD]'
                 }`}
               >
                 <Bookmark
-                  className={`h-3.5 w-3.5 ${onlySavedValue ? 'fill-current' : ''}`}
+                  className={`h-3.5 w-3.5 ${
+                    onlySavedValue ? 'fill-current text-white' : 'text-[#6B1CD4]'
+                  }`}
                   aria-hidden="true"
                 />
                 <span>Saved</span>
@@ -305,15 +310,15 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
               <div
                 role="group"
                 aria-label="Listings view mode"
-                className="inline-flex items-center rounded-lg bg-[#EFEFF4] p-0.5"
+                className="inline-flex items-center rounded-lg border border-[#6B1CD4]/12 bg-[#EFE8FC] p-0.5"
               >
                 <button
                   type="button"
                   onClick={() => setViewMode('grid')}
                   className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                     viewMode === 'grid'
-                      ? 'bg-white text-[#090A14] shadow-2xs'
-                      : 'text-[#5C5E6B] hover:text-[#090A14]'
+                      ? 'bg-white text-[#6B1CD4] shadow-2xs'
+                      : 'text-[#544E66] hover:text-[#140A29]'
                   }`}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
@@ -324,8 +329,8 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                   onClick={() => setViewMode('map')}
                   className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                     viewMode === 'map'
-                      ? 'bg-white text-[#090A14] shadow-2xs'
-                      : 'text-[#5C5E6B] hover:text-[#090A14]'
+                      ? 'bg-white text-[#6B1CD4] shadow-2xs'
+                      : 'text-[#544E66] hover:text-[#140A29]'
                   }`}
                 >
                   <MapIcon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -337,11 +342,11 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
 
           {/* Expandable Secondary Filters Drawer */}
           {showFilters && (
-            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[#090A14]/8 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[#6B1CD4]/12 pt-3 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label
                   htmlFor="toolbar-min-rent"
-                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                  className="block text-[11px] font-medium text-[#544E66]"
                 >
                   Minimum Rent
                 </label>
@@ -354,7 +359,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                       minRent: e.target.value ? Number(e.target.value) : null,
                     })
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-[#FAFAFC] px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                  className="mt-1 h-9 w-full rounded-lg border border-[#6B1CD4]/18 bg-[#F9F7FD] px-3 text-xs font-semibold text-[#140A29] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
                 >
                   {MIN_RENT_OPTIONS.map((opt) => (
                     <option key={opt.label} value={opt.value}>
@@ -367,7 +372,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
               <div>
                 <label
                   htmlFor="toolbar-max-rent"
-                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                  className="block text-[11px] font-medium text-[#544E66]"
                 >
                   Maximum Rent
                 </label>
@@ -380,7 +385,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                       maxRent: e.target.value ? Number(e.target.value) : null,
                     })
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-[#FAFAFC] px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                  className="mt-1 h-9 w-full rounded-lg border border-[#6B1CD4]/18 bg-[#F9F7FD] px-3 text-xs font-semibold text-[#140A29] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
                 >
                   {MAX_RENT_OPTIONS.map((opt) => (
                     <option key={opt.label} value={opt.value}>
@@ -393,7 +398,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
               <div>
                 <label
                   htmlFor="toolbar-furnishing"
-                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                  className="block text-[11px] font-medium text-[#544E66]"
                 >
                   Furnishing
                 </label>
@@ -406,7 +411,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                       furnishing: e.target.value as 'all' | FurnishingStatus,
                     })
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-[#FAFAFC] px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                  className="mt-1 h-9 w-full rounded-lg border border-[#6B1CD4]/18 bg-[#F9F7FD] px-3 text-xs font-semibold text-[#140A29] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
                 >
                   {FURNISHING_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -419,7 +424,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
               <div>
                 <label
                   htmlFor="toolbar-source"
-                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                  className="block text-[11px] font-medium text-[#544E66]"
                 >
                   Posted By
                 </label>
@@ -432,7 +437,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                       submitterRole: e.target.value as 'all' | SubmitterRole,
                     })
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-[#FAFAFC] px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                  className="mt-1 h-9 w-full rounded-lg border border-[#6B1CD4]/18 bg-[#F9F7FD] px-3 text-xs font-semibold text-[#140A29] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
                 >
                   {SOURCE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -454,12 +459,12 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
               data-testid="empty-listings-state"
-              className="mt-6 rounded-2xl border border-[#090A14]/9 bg-white px-6 py-14 text-center"
+              className="mt-6 rounded-2xl border border-[#6B1CD4]/14 bg-white px-6 py-14 text-center shadow-[0_14px_30px_-24px_rgba(95,24,200,0.2)]"
             >
-              <h3 className="font-display text-lg font-bold text-[#090A14]">
+              <h3 className="font-display text-lg font-bold text-[#140A29]">
                 {onlySavedValue ? 'No saved flats yet' : 'No matching flats found'}
               </h3>
-              <p className="mx-auto mt-1.5 max-w-md text-sm text-[#5C5E6B]">
+              <p className="mx-auto mt-1.5 max-w-md text-sm text-[#544E66]">
                 {onlySavedValue
                   ? 'Save any flat card to shortlist apartments for quick comparison.'
                   : 'Try selecting another Pune locality, relaxing furnishing filters, or increasing your monthly budget.'}
@@ -468,7 +473,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                 <button
                   type="button"
                   onClick={onResetFilters}
-                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-[#090A14] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6B1CD4]"
+                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_22px_-10px_rgba(107,28,212,0.5)] transition-all hover:from-[#6B1CD4] hover:to-[#4E11A8]"
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
                   <span>Show All Flats</span>
@@ -479,7 +484,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-[#090A14]/15 bg-white px-5 py-2.5 text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-[#6B1CD4]/22 bg-white px-5 py-2.5 text-sm font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
                 >
                   <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
                   <span>Ask on WhatsApp</span>

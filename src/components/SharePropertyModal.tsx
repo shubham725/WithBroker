@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Copy, Mail, MessageSquare, Send, Share2, X } from 'lucide-react';
-import { WEBSITE_URL } from '../data/properties';
 import { PropertyListing } from '../types/property';
 import {
   buildEmailSharePostUrl,
@@ -10,6 +9,7 @@ import {
   buildWhatsAppPropertyShareText,
   buildWhatsAppSharePostUrl,
   formatINR,
+  getPublicPropertyShareUrl,
 } from '../utils/propertyLogic';
 import { SafeImage } from './SafeImage';
 import { WhatsAppIcon } from './WhatsAppButton';
@@ -45,10 +45,11 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
 
   if (!property) return null;
 
-  const shareText = buildPropertyShareText(property);
-  const whatsAppQuickText = buildWhatsAppPropertyShareText(property);
+  const propertyShareUrl = getPublicPropertyShareUrl(property.propertyCode || property.id);
+  const shareText = buildPropertyShareText(property, propertyShareUrl);
+  const whatsAppQuickText = buildWhatsAppPropertyShareText(property, propertyShareUrl);
   const whatsAppShareUrl = buildWhatsAppSharePostUrl(whatsAppQuickText);
-  const telegramShareUrl = buildTelegramSharePostUrl(whatsAppQuickText, WEBSITE_URL);
+  const telegramShareUrl = buildTelegramSharePostUrl(whatsAppQuickText, propertyShareUrl);
   const smsShareUrl = buildSmsSharePostUrl(whatsAppQuickText);
   const emailShareUrl = buildEmailSharePostUrl(property, shareText);
 
@@ -76,10 +77,10 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
 
     if (didCopy) {
       setCopied(true);
-      setShareFeedback('Advertisement copied to clipboard.');
+      setShareFeedback('Listing post with direct flat link copied to clipboard.');
       setTimeout(() => setCopied(false), 2500);
     } else {
-      setShareFeedback('Select and copy the formatted advertisement text above.');
+      setShareFeedback('Select and copy the formatted listing post above.');
     }
   };
 
@@ -89,7 +90,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
         await navigator.share({
           title: `${property.propertyType} Flat for Rent in ${property.locality}`,
           text: shareText,
-          url: WEBSITE_URL,
+          url: propertyShareUrl,
         });
         setShareFeedback('Shared via your device share sheet.');
         return;
@@ -107,31 +108,31 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="share-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#090A14]/65 p-3 sm:p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#140928]/65 p-3 sm:p-4 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[#090A14]/10 bg-white shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[#6B1CD4]/16 bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[#090A14]/8 px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-b border-[#6B1CD4]/12 px-5 py-4">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-[#6B1CD4]">Ready-to-Send Listing</p>
             <h2
               id="share-modal-title"
-              className="font-display text-base sm:text-lg font-bold text-[#090A14]"
+              className="font-display text-base sm:text-lg font-bold text-[#140A29]"
             >
               Share Property Text Post
             </h2>
-            <p className="truncate text-xs text-[#656275]">
-              Includes Website & WhatsApp Group link for {property.title}
+            <p className="truncate text-xs text-[#544E66]">
+              Includes direct link to open {property.title}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close share dialog"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#090A14]/12 text-[#090A14] transition-colors hover:bg-[#F9F8FC]"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#6B1CD4]/18 text-[#140A29] transition-colors hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -139,9 +140,9 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
 
         <div className="overflow-y-auto p-5 space-y-4">
           {/* Rich WhatsApp / Social Link Preview Card */}
-          <div className="overflow-hidden rounded-xl border border-[#090A14]/10 bg-[#F9F8FC]">
+          <div className="overflow-hidden rounded-xl border border-[#6B1CD4]/14 bg-[#F9F7FD]">
             <div className="flex items-center gap-3 p-3">
-              <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-[#EDE7F9]">
+              <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-[#EFE8FC]">
                 <SafeImage
                   src={property.images[0] || ''}
                   alt={property.title}
@@ -150,16 +151,16 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-bold tracking-wider text-[#6B1CD4] uppercase">
-                  WhatsApp / Social Link Preview
+                  Direct Flat Link Preview
                 </p>
-                <p className="truncate text-xs font-bold text-[#090A14] sm:text-sm">
+                <p className="truncate text-xs font-bold text-[#140A29] sm:text-sm">
                   {property.title} – {formatINR(property.monthlyRent)}/month
                 </p>
-                <p className="truncate text-[11px] text-[#524F61]">
+                <p className="truncate text-[11px] text-[#544E66]">
                   Location: {property.locality}
                 </p>
-                <p className="mt-0.5 truncate text-[11px] font-medium text-[#6B1CD4]">
-                  {WEBSITE_URL}
+                <p className="mt-0.5 truncate text-[11px] font-semibold text-[#6B1CD4]">
+                  {propertyShareUrl}
                 </p>
               </div>
             </div>
@@ -174,7 +175,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
             readOnly
             value={shareText}
             rows={12}
-            className="w-full resize-none rounded-xl border border-[#090A14]/10 bg-[#F9F8FC] p-4 font-sans text-xs sm:text-[13px] leading-relaxed text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
+            className="w-full resize-none rounded-xl border border-[#6B1CD4]/16 bg-[#F9F7FD] p-4 font-sans text-xs sm:text-[13px] leading-relaxed text-[#140A29] focus:border-[#6B1CD4] focus:outline-none"
           />
 
           {shareFeedback && (
@@ -189,7 +190,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
               href={whatsAppShareUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#6B1CD4] px-3.5 py-2 text-xs sm:text-sm font-semibold text-white transition-colors hover:bg-[#5412AD]"
+              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-3.5 py-2 text-xs sm:text-sm font-semibold text-white transition-all hover:from-[#6B1CD4] hover:to-[#4E11A8]"
             >
               <WhatsAppIcon className="h-4 w-4 text-white" />
               <span>WhatsApp</span>
@@ -207,7 +208,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
 
             <a
               href={smsShareUrl}
-              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#090A14]/15 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#6B1CD4]/20 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
             >
               <MessageSquare className="h-4 w-4" aria-hidden="true" />
               <span>SMS / Text</span>
@@ -216,7 +217,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
             <button
               type="button"
               onClick={handleCopyText}
-              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#090A14]/15 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#6B1CD4]/20 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
             >
               {copied ? (
                 <>
@@ -233,7 +234,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
 
             <a
               href={emailShareUrl}
-              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#090A14]/15 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#6B1CD4]/20 bg-white px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
             >
               <Mail className="h-4 w-4" aria-hidden="true" />
               <span>Email</span>
@@ -242,7 +243,7 @@ export const SharePropertyModal: React.FC<SharePropertyModalProps> = ({
             <button
               type="button"
               onClick={handleNativeShare}
-              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#090A14]/15 bg-[#F9F8FC] px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+              className="inline-flex min-h-[42px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-[#6B1CD4]/20 bg-[#F9F7FD] px-3.5 py-2 text-xs sm:text-sm font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F1E8FF] hover:text-[#6B1CD4]"
             >
               <Share2 className="h-4 w-4" aria-hidden="true" />
               <span>More Apps</span>

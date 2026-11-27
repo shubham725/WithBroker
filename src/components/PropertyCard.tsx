@@ -70,12 +70,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       data-rented={isRentedOut ? 'true' : 'false'}
       className={`group flex h-full flex-col overflow-hidden rounded-2xl border transition-all duration-200 ${
         isRentedOut
-          ? 'border-[#090A14]/10 bg-[#FAFAFC]'
-          : 'border-[#090A14]/9 bg-white hover:border-[#090A14]/22 hover:shadow-[0_14px_30px_-16px_rgba(9,10,20,0.14)]'
+          ? 'border-[#6B1CD4]/10 bg-[#FAF8FE]'
+          : 'border-[#6B1CD4]/12 bg-white hover:border-[#6B1CD4]/36 hover:shadow-[0_18px_36px_-20px_rgba(95,24,200,0.22)]'
       }`}
     >
       {/* Top Property Image Frame */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#F3F3F7]">
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#F1EBFC]">
         <button
           type="button"
           onClick={() => onViewDetails(property)}
@@ -105,7 +105,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Top-Left Property Type Tag */}
         <span
           className={`pointer-events-none absolute top-3 left-3 rounded-lg px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-xs ${
-            isRentedOut ? 'bg-[#2C2D36]/90' : 'bg-[#090A14]/82'
+            isRentedOut ? 'bg-[#2C2440]/90' : 'bg-[#1B0D36]/86'
           }`}
         >
           {property.propertyType}
@@ -164,14 +164,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <div className="flex items-baseline gap-1.5">
             <span
               className={`font-display text-[22px] font-bold tracking-[-0.015em] tabular-nums ${
-                isRentedOut ? 'text-[#767887] line-through' : 'text-[#090A14]'
+                isRentedOut ? 'text-[#7A748B] line-through' : 'text-[#140A29]'
               }`}
             >
               {formatINR(property.monthlyRent)}
             </span>
-            <span className="text-xs font-medium text-[#5C5E6B]">/mo</span>
+            <span className="text-xs font-medium text-[#544E66]">/mo</span>
           </div>
-          <span className="text-[11px] font-medium text-[#767887] tabular-nums">
+          <span className="text-[11px] font-medium text-[#7A748B] tabular-nums">
             {property.propertyCode}
           </span>
         </div>
@@ -182,36 +182,36 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           onClick={() => onViewDetails(property)}
           className="mt-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
         >
-          <h3 className="line-clamp-2 min-h-[2.6rem] font-display text-[15px] sm:text-base font-bold leading-snug text-[#090A14] transition-colors hover:text-[#6B1CD4]">
+          <h3 className="line-clamp-2 min-h-[2.6rem] font-display text-[15px] sm:text-base font-bold leading-snug text-[#140A29] transition-colors hover:text-[#6B1CD4]">
             {property.title}
           </h3>
         </button>
 
         {/* Locality */}
-        <p className="mt-1 flex items-center gap-1.5 text-xs text-[#5C5E6B]">
+        <p className="mt-1 flex items-center gap-1.5 text-xs text-[#544E66]">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-[#6B1CD4]" aria-hidden="true" />
           <span className="truncate">{property.locality}</span>
         </p>
 
         {/* Clean 3-Column Specs Strip */}
-        <div className="mt-3.5 grid grid-cols-3 gap-2 border-y border-[#090A14]/8 py-2.5 text-left">
+        <div className="mt-3.5 grid grid-cols-3 gap-2 border-y border-[#6B1CD4]/10 py-2.5 text-left">
           <div className="min-w-0">
-            <span className="block text-[11px] text-[#6B6D7C]">Deposit</span>
-            <p className="mt-0.5 truncate text-xs font-semibold text-[#090A14] tabular-nums">
+            <span className="block text-[11px] text-[#6A637D]">Deposit</span>
+            <p className="mt-0.5 truncate text-xs font-semibold text-[#140A29] tabular-nums">
               {formatDepositLabel(property.securityDeposit)}
             </p>
           </div>
 
           <div className="min-w-0">
-            <span className="block text-[11px] text-[#6B6D7C]">Brokerage</span>
-            <p className="mt-0.5 truncate text-xs font-semibold text-[#090A14] tabular-nums">
+            <span className="block text-[11px] text-[#6A637D]">Brokerage</span>
+            <p className="mt-0.5 truncate text-xs font-semibold text-[#140A29] tabular-nums">
               {brokerageShort}
             </p>
           </div>
 
           <div className="min-w-0">
-            <span className="block text-[11px] text-[#6B6D7C]">Furnishing</span>
-            <p className="mt-0.5 truncate text-xs font-semibold text-[#090A14]">
+            <span className="block text-[11px] text-[#6A637D]">Furnishing</span>
+            <p className="mt-0.5 truncate text-xs font-semibold text-[#140A29]">
               {property.furnishing === 'Fully Furnished' ? 'Furnished' : property.furnishing}
             </p>
           </div>
@@ -219,7 +219,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         {/* Unboxed Inline Highlights Metadata */}
         {topHighlights.length > 0 && (
-          <p className="mt-3 truncate text-xs text-[#5C5E6B]">
+          <p className="mt-3 truncate text-xs text-[#544E66]">
             {topHighlights.join(' · ')}
           </p>
         )}
@@ -252,7 +252,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 type="button"
                 onClick={() => onShare(property)}
                 aria-label={`Share ${property.title} as text post`}
-                className="inline-flex min-h-[40px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#090A14]/14 bg-white px-3.5 py-2 text-xs sm:text-[13px] font-semibold text-[#090A14] transition-colors duration-150 hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                className="inline-flex min-h-[40px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#6B1CD4]/20 bg-white px-3.5 py-2 text-xs sm:text-[13px] font-semibold text-[#140A29] transition-colors duration-150 hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
               >
                 <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>Share</span>

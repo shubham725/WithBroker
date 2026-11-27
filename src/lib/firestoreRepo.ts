@@ -13,13 +13,12 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import { LOCALITIES, SAMPLE_PROPERTIES } from '../data/properties';
+import { SAMPLE_PROPERTIES } from '../data/properties';
 import type {
   AdminDashboardStats,
   AdminNotification,
   AdminPropertyRecord,
   FurnishingStatus,
-  LocalityConfig,
   PropertyListing,
   PropertySubmissionInput,
   PropertyType,
@@ -27,9 +26,15 @@ import type {
   SuitableFor,
   WorkflowStatus,
 } from '../types/property';
-import { generateAutoPropertyDescription } from '../utils/propertyLogic';
+import {
+  buildDynamicLocalities,
+  generateAutoPropertyDescription,
+  inferAreaMeta,
+} from '../utils/propertyLogic';
 import type { AiExtractedPropertyDraft } from '../types/aiPropertyChat';
 import { OperationType, db, handleFirestoreError } from './firebase';
+
+export { buildDynamicLocalities, inferAreaMeta };
 
 const PUBLIC_COLLECTION = 'public_properties';
 const SUBMISSIONS_COLLECTION = 'property_submissions';
@@ -41,151 +46,6 @@ const CATALOG_META_DOC = 'catalog';
 const PHOTO_PREFIX = 'fbphoto://';
 const photoDataUrlCache = new Map<string, string>();
 const SPAM_COOLDOWN_KEY = 'withbroker-last-submit-ts';
-
-const PUNE_AREA_DIRECTORY: Record<
-  string,
-  { slug: string; label: string; lat: number; lng: number }
-> = {
-  'viman nagar': { slug: 'viman-nagar', label: 'Viman Nagar', lat: 18.5679, lng: 73.9143 },
-  'wadgaon sheri': { slug: 'wadgaon-sheri', label: 'Wadgaon Sheri', lat: 18.5529, lng: 73.9277 },
-  'somnath nagar': { slug: 'somnath-nagar', label: 'Somnath Nagar', lat: 18.5565, lng: 73.9306 },
-  'kharadi': { slug: 'kharadi', label: 'Kharadi', lat: 18.5515, lng: 73.9475 },
-  'keshav nagar': { slug: 'keshav-nagar', label: 'Keshav Nagar', lat: 18.5337, lng: 73.9521 },
-  'wanowrie': { slug: 'wanowrie', label: 'Wanowrie', lat: 18.4976, lng: 73.9036 },
-  'wanawadi': { slug: 'wanowrie', label: 'Wanowrie', lat: 18.4976, lng: 73.9036 },
-  'ganesh nagar': { slug: 'ganesh-nagar', label: 'Ganesh Nagar', lat: 18.5498, lng: 73.9308 },
-  'chandan nagar': { slug: 'chandan-nagar', label: 'Chandan Nagar', lat: 18.5612, lng: 73.9372 },
-  'kalyani nagar': { slug: 'kalyani-nagar', label: 'Kalyani Nagar', lat: 18.5463, lng: 73.9033 },
-  'magarpatta': { slug: 'magarpatta', label: 'Magarpatta', lat: 18.5158, lng: 73.9272 },
-  'hadapsar': { slug: 'hadapsar', label: 'Hadapsar', lat: 18.5089, lng: 73.9259 },
-  'baner': { slug: 'baner', label: 'Baner', lat: 18.559, lng: 73.7868 },
-  'wakad': { slug: 'wakad', label: 'Wakad', lat: 18.5975, lng: 73.764 },
-  'hinjewadi': { slug: 'hinjewadi', label: 'Hinjewadi', lat: 18.5913, lng: 73.7389 },
-  'koregaon park': { slug: 'koregaon-park', label: 'Koregaon Park', lat: 18.5362, lng: 73.8939 },
-  'wagholi': { slug: 'wagholi', label: 'Wagholi', lat: 18.5808, lng: 73.9787 },
-  'mundhwa': { slug: 'keshav-nagar', label: 'Keshav Nagar', lat: 18.5337, lng: 73.9521 },
-  'dhanori': { slug: 'dhanori', label: 'Dhanori', lat: 18.5976, lng: 73.9025 },
-  'lohegaon': { slug: 'lohegaon', label: 'Lohegaon', lat: 18.596, lng: 73.9277 },
-};
-
-function slugifyArea(input: string): string {
-  const cleaned = input
-    .toLowerCase()
-    .replace(/pune/gi, '')
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 60);
-  return cleaned.length >= 2 ? cleaned : 'other';
-}
-
-function titleCase(str: string): string {
-  return str
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ');
-}
-
-export function inferAreaMeta(location: string): {
-  slug: string;
-  label: string;
-  subLocality: string;
-  lat: number;
-  lng: number;
-} {
-  const lower = location.toLowerCase();
-  for (const [key, meta] of Object.entries(PUNE_AREA_DIRECTORY)) {
-    if (lower.includes(key)) {
-      return {
-        slug: meta.slug,
-        label: meta.label,
-        subLocality: meta.label,
-        lat: meta.lat,
-        lng: meta.lng,
-      };
-    }
-  }
-
-  const firstPart = location.split(',')[0]?.trim() || location.trim();
-  const cleanLabel = firstPart.length >= 2 ? titleCase(firstPart.slice(0, 50)) : 'Nearby Areas';
-  return {
-    slug: slugifyArea(cleanLabel),
-    label: cleanLabel,
-    subLocality: cleanLabel,
-    lat: 18.5529,
-    lng: 73.9277,
-  };
-}
-
-/**
- * Dynamically builds area cards for ExploreAreasSection & Hero dropdown
- * so every approved flat automatically appears under its matching area!
- */
-export function buildDynamicLocalities(allProperties: PropertyListing[]): LocalityConfig[] {
-  const areaMap = new Map<string, LocalityConfig>();
-
-  // Always start with the 3 core WithBroker Pune focus areas
-  for (const base of LOCALITIES) {
-    if (base.slug !== 'other') {
-      areaMap.set(base.slug, { ...base, matchSlugs: [...base.matchSlugs] });
-    }
-  }
-
-  // Group every approved property into its exact area (creating dynamic area cards for new areas!)
-  for (const prop of allProperties) {
-    const inferred = inferAreaMeta(`${prop.subLocality} ${prop.locality}`);
-    const slug =
-      prop.localitySlug && prop.localitySlug !== 'other' ? prop.localitySlug : inferred.slug;
-    const existingArea = areaMap.get(slug);
-    const coverImg = prop.images[0] || '/assets/properties/flat-1/photo-1.jpeg';
-
-    if (existingArea) {
-      if (!existingArea.matchSlugs.includes(prop.localitySlug)) {
-        existingArea.matchSlugs.push(prop.localitySlug);
-      }
-      if (!existingArea.matchSlugs.includes(slug)) {
-        existingArea.matchSlugs.push(slug);
-      }
-    } else {
-      const label =
-        slug === inferred.slug
-          ? inferred.label
-          : titleCase(slug.replace(/-/g, ' '));
-      areaMap.set(slug, {
-        id: `loc-${slug}`,
-        name: label,
-        slug,
-        subtitle: `Verified rental flats in ${label}, Pune`,
-        image: coverImg,
-        center: prop.coordinates,
-        matchSlugs: Array.from(new Set([slug, prop.localitySlug].filter(Boolean))),
-      });
-    }
-  }
-
-  // Sort: core areas first, then additional areas ordered by number of flats
-  const coreOrder = ['viman-nagar', 'wadgaon-sheri', 'somnath-nagar'];
-  const list = Array.from(areaMap.values());
-  const countFor = (loc: LocalityConfig) =>
-    allProperties.filter(
-      (p) =>
-        p.localitySlug === loc.slug ||
-        inferAreaMeta(`${p.subLocality} ${p.locality}`).slug === loc.slug
-    ).length;
-
-  list.sort((a, b) => {
-    const idxA = coreOrder.indexOf(a.slug);
-    const idxB = coreOrder.indexOf(b.slug);
-    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-    if (idxA !== -1) return -1;
-    if (idxB !== -1) return 1;
-    return countFor(b) - countFor(a) || a.name.localeCompare(b.name);
-  });
-
-  return list;
-}
 
 function normalizePhone10(raw: string): string {
   const digits = raw.replace(/\D/g, '');

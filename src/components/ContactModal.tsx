@@ -36,20 +36,20 @@ export const ContactModal: React.FC<ContactModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="contact-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#090A14]/65 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#140928]/65 p-4 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-[#090A14]/10 bg-white shadow-2xl"
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-[#6B1CD4]/16 bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#090A14]/8 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-[#6B1CD4]/12 px-5 py-4">
           <div>
             <p className="text-xs font-semibold text-[#6B1CD4]">WithBroker Pune</p>
             <h2
               id="contact-modal-title"
-              className="font-display text-lg font-bold text-[#090A14]"
+              className="font-display text-lg font-bold text-[#140A29]"
             >
               Contact &amp; Community
             </h2>
@@ -58,35 +58,35 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close contact dialog"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#090A14]/12 text-[#090A14] transition-colors hover:bg-[#F9F8FC]"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#6B1CD4]/18 text-[#140A29] transition-colors hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Hairline-Separated Body Sections */}
-        <div className="divide-y divide-[#090A14]/8 px-5">
+        <div className="divide-y divide-[#6B1CD4]/10 px-5">
           {/* Direct WhatsApp Helpdesk */}
           <div className="py-5">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#6B1CD4] text-white">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7C2AE8] to-[#5F18C8] text-white">
                 <PhoneCall className="h-4 w-4" aria-hidden="true" />
               </span>
               <div>
-                <p className="text-xs font-medium text-[#656275]">WhatsApp Helpdesk</p>
-                <p className="font-display text-base font-bold text-[#090A14] tabular-nums">
+                <p className="text-xs font-medium text-[#544E66]">WhatsApp Helpdesk</p>
+                <p className="font-display text-base font-bold text-[#140A29] tabular-nums">
                   {WHATSAPP_NUMBER_DISPLAY}
                 </p>
               </div>
             </div>
-            <p className="mt-2.5 text-xs leading-relaxed text-[#656275]">
+            <p className="mt-2.5 text-xs leading-relaxed text-[#544E66]">
               Message us directly for flat visits, availability checks, rent &amp; brokerage details in Pune.
             </p>
             <a
               href={buildGeneralWhatsAppUrl()}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3.5 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#6B1CD4] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#5412AD]"
+              className="mt-3.5 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_22px_-10px_rgba(107,28,212,0.5)] transition-all hover:from-[#6B1CD4] hover:to-[#4E11A8]"
             >
               <WhatsAppIcon className="h-4 w-4 text-white" />
               <span>Chat on WhatsApp</span>
@@ -96,24 +96,24 @@ export const ContactModal: React.FC<ContactModalProps> = ({
           {/* WhatsApp Community */}
           <div className="py-5">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#090A14] text-white">
-                <Users className="h-4 w-4 text-[#C89B45]" aria-hidden="true" />
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1A0B36] text-white">
+                <Users className="h-4 w-4 text-[#D5B6FF]" aria-hidden="true" />
               </span>
               <div>
-                <p className="text-xs font-medium text-[#656275]">Daily Flat Alerts</p>
-                <p className="font-display text-sm font-bold text-[#090A14]">
+                <p className="text-xs font-medium text-[#544E66]">Daily Flat Alerts</p>
+                <p className="font-display text-sm font-bold text-[#140A29]">
                   WithBroker WhatsApp Group
                 </p>
               </div>
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-[#656275]">
+            <p className="mt-2 text-xs leading-relaxed text-[#544E66]">
               Join our Pune rental community for instant updates on new 1RK, 1BHK, 2BHK &amp; 3BHK flats.
             </p>
             <a
               href={WHATSAPP_COMMUNITY_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3.5 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[#090A14]/15 bg-white px-4 py-2.5 text-sm font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+              className="mt-3.5 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[#6B1CD4]/22 bg-white px-4 py-2.5 text-sm font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
             >
               <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
               <span>Join WhatsApp Group</span>
@@ -122,12 +122,12 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
           {/* Service Areas & Quick Post Trigger */}
           <div className="space-y-3 py-5">
-            <div className="flex items-start gap-2 text-xs text-[#656275]">
+            <div className="flex items-start gap-2 text-xs text-[#544E66]">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#6B1CD4]" aria-hidden="true" />
               <span>
-                Serving <strong className="font-semibold text-[#090A14]">Viman Nagar</strong>,{' '}
-                <strong className="font-semibold text-[#090A14]">Wadgaon Sheri</strong>,{' '}
-                <strong className="font-semibold text-[#090A14]">Somnath Nagar</strong> &amp; nearby Pune areas.
+                Serving rental flats &amp; roommates across{' '}
+                <strong className="font-semibold text-[#140A29]">all of Pune, Maharashtra</strong>{' '}
+                — expanding steadily to more locations.
               </span>
             </div>
 
@@ -137,9 +137,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 onClose();
                 onOpenPostModal();
               }}
-              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#F9F8FC] px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#6B1CD4] transition-colors hover:bg-[#6B1CD4]/10"
+              className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-[#6B1CD4]/15 bg-[#F7F3FF] px-4 py-2.5 text-xs sm:text-sm font-semibold text-[#6B1CD4] transition-colors hover:bg-[#EFE5FF]"
             >
-              <PlusCircle className="h-4 w-4 text-[#C89B45]" aria-hidden="true" />
+              <PlusCircle className="h-4 w-4 text-[#6B1CD4]" aria-hidden="true" />
               <span>Have a Flat for Rent? Post It Here</span>
             </button>
           </div>

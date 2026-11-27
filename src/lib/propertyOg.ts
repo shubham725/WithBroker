@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { SAMPLE_PROPERTIES } from '../data/properties';
+import { BASELINE_ROOMMATE_LISTINGS } from '../data/roommates';
 
 const PHOTO_PREFIX = 'fbphoto://';
 const VALID_ID_RE = /^[A-Za-z0-9_-]{3,48}$/;
@@ -20,6 +21,24 @@ export interface OgPropertyData {
   workflowStatus: string;
   shortDescription: string;
   fullDescription: string;
+  firstImage: string;
+  updatedAtVersion: string;
+}
+
+export interface OgRoommateData {
+  listingCode: string;
+  roomType: string;
+  flatOccupancy: string;
+  location: string;
+  publicBuildingName: string;
+  rent: number;
+  deposit: number;
+  furnishing: string;
+  preferredGender: string;
+  peopleRequired: number;
+  urgent: boolean;
+  status: string;
+  description: string;
   firstImage: string;
   updatedAtVersion: string;
 }
@@ -191,6 +210,84 @@ export async function fetchPublicPropertyForOg(rawId: string): Promise<OgPropert
   }
 
   return null;
+}
+
+function mapFirestoreRoommateToOg(
+  docId: string,
+  docData: FirestoreRestDoc
+): OgRoommateData | null {
+  const fields = docData.fields || {};
+  const status = getString(fields, 'status') || 'Active';
+  if (status !== 'Active' && status !== 'Fulfilled') {
+    return null;
+  }
+
+  const images = getStringArray(fields, 'images');
+  return {
+    listingCode: getString(fields, 'listingCode') || docId,
+    roomType: getString(fields, 'roomType') || 'Room',
+    flatOccupancy: getString(fields, 'flatOccupancy') || 'Pre-Occupied Flat',
+    location: getString(fields, 'location') || 'Pune',
+    publicBuildingName: getString(fields, 'publicBuildingName'),
+    rent: Math.round(getNumber(fields, 'rent')),
+    deposit: Math.round(getNumber(fields, 'deposit')),
+    furnishing: getString(fields, 'furnishing') || 'Semi-Furnished',
+    preferredGender: getString(fields, 'preferredGender') || 'Any',
+    peopleRequired: Math.max(1, Math.round(getNumber(fields, 'peopleRequired') || 1)),
+    urgent: getBoolean(fields, 'urgent'),
+    status,
+    description: getString(fields, 'description'),
+    firstImage: images[0] || '',
+    updatedAtVersion: getTimestampVersion(fields, docData.updateTime),
+  };
+}
+
+function findBaselineRoommateFallback(rawCode: string): OgRoommateData | null {
+  const lower = rawCode.toLowerCase();
+  const matched = BASELINE_ROOMMATE_LISTINGS.find(
+    (r) => r.listingCode.toLowerCase() === lower || r.id.toLowerCase() === lower
+  );
+  if (!matched) return null;
+  return {
+    listingCode: matched.listingCode,
+    roomType: matched.roomType,
+    flatOccupancy: matched.flatOccupancy || 'Pre-Occupied Flat',
+    location: matched.location,
+    publicBuildingName: matched.publicBuildingName || '',
+    rent: matched.rent,
+    deposit: matched.deposit,
+    furnishing: matched.furnishing,
+    preferredGender: matched.preferredGender,
+    peopleRequired: matched.peopleRequired,
+    urgent: Boolean(matched.urgent),
+    status: matched.status,
+    description: matched.description,
+    firstImage: matched.images[0] || '',
+    updatedAtVersion: '',
+  };
+}
+
+/**
+ * Fetches an approved public roommate vacancy strictly from `/public_roommates` (zero PII)
+ * with fallback to baseline Pune roommate listings.
+ */
+export async function fetchPublicRoommateForOg(rawCode: string): Promise<OgRoommateData | null> {
+  const trimmed = String(rawCode || '').trim();
+  if (!VALID_ID_RE.test(trimmed)) {
+    return null;
+  }
+
+  const normalized = trimmed.toUpperCase();
+  const directDoc =
+    (await fetchFirestoreDocument('public_roommates', normalized)) ||
+    (normalized !== trimmed ? await fetchFirestoreDocument('public_roommates', trimmed) : null);
+
+  if (directDoc) {
+    const mapped = mapFirestoreRoommateToOg(normalized, directDoc);
+    if (mapped) return mapped;
+  }
+
+  return findBaselineRoommateFallback(trimmed);
 }
 
 /**
@@ -405,6 +502,123 @@ export function injectPropertyOgIntoHtml(
   ].join('\n    ');
 
   // Remove static default title/meta tags before injecting property-specific tags
+  let html = baseHtml
+    .replace(/<title>[\s\S]*?<\/title>/i, '')
+    .replace(/<meta\s+name=["']description["'][^>]*>/gi, '')
+    .replace(/<meta\s+property=["']og:[^"']+["'][^>]*>/gi, '')
+    .replace(/<meta\s+name=["']twitter:[^"']+["'][^>]*>/gi, '')
+    .replace(/<link\s+rel=["']canonical["'][^>]*>/gi, '');
+
+  if (/<head[^>]*>/i.test(html)) {
+    html = html.replace(/<head([^>]*)>/i, `<head$1>\n    ${ogBlock}`);
+  } else {
+    html = `${ogBlock}\n${html}`;
+  }
+
+  return html;
+}
+
+export function buildRoommateOgMetadata(roommate: OgRoommateData, origin: string) {
+  const cleanOrigin = origin.replace(/\/+$/, '');
+  const rentFormatted = formatInrPlain(roommate.rent);
+  const genderLabel =
+    roommate.preferredGender === 'Any' ? 'Roommate' : `${roommate.preferredGender} Roommate`;
+  const countLabel =
+    roommate.peopleRequired > 1 ? `${roommate.peopleRequired} ${genderLabel}s` : `1 ${genderLabel}`;
+  const locationDisplay = roommate.publicBuildingName
+    ? `${roommate.publicBuildingName}, ${roommate.location}`
+    : roommate.location;
+  const locationWithCity = locationDisplay.toLowerCase().includes('pune')
+    ? locationDisplay
+    : `${locationDisplay}, Pune`;
+
+  const statusPrefix = roommate.status === 'Fulfilled' ? '[Filled] ' : '';
+  const ogTitle = `${statusPrefix}${countLabel} Required · ${roommate.roomType} – ${rentFormatted}/person | WithBroker`;
+
+  const snippetSource = (roommate.description || '').trim();
+  const shortSummary =
+    snippetSource.length > 125 ? `${snippetSource.slice(0, 122).trim()}...` : snippetSource;
+
+  const ogDescription = [
+    `Rent: ${rentFormatted}/person`,
+    `Location: ${locationWithCity}`,
+    shortSummary ||
+      `${roommate.furnishing} ${roommate.flatOccupancy} (${roommate.roomType}) on WithBroker.`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+    .slice(0, 240);
+
+  const canonicalUrl = `${cleanOrigin}/roommate/${encodeURIComponent(roommate.listingCode)}`;
+  const imageUrl = resolveAbsoluteShareImageUrl(
+    roommate.firstImage,
+    cleanOrigin,
+    roommate.updatedAtVersion
+  );
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Accommodation',
+    name: `${countLabel} Required · ${roommate.roomType} in ${roommate.location}`,
+    description: ogDescription,
+    image: imageUrl,
+    url: canonicalUrl,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: locationDisplay,
+      addressLocality: 'Pune',
+      addressRegion: 'Maharashtra',
+      addressCountry: 'IN',
+    },
+    offers: {
+      '@type': 'Offer',
+      price: String(roommate.rent),
+      priceCurrency: 'INR',
+      availability:
+        roommate.status === 'Fulfilled'
+          ? 'https://schema.org/OutOfStock'
+          : 'https://schema.org/InStock',
+    },
+  };
+
+  return {
+    titleTag: ogTitle,
+    ogTitle,
+    ogDescription,
+    ogImage: imageUrl,
+    ogUrl: canonicalUrl,
+    jsonLdString: JSON.stringify(jsonLd).replace(/</g, '\\u003c'),
+  };
+}
+
+export function injectRoommateOgIntoHtml(
+  baseHtml: string,
+  roommate: OgRoommateData,
+  origin: string
+): string {
+  const meta = buildRoommateOgMetadata(roommate, origin);
+
+  const ogBlock = [
+    `<title>${escapeHtmlAttr(meta.titleTag)}</title>`,
+    `<meta name="description" content="${escapeHtmlAttr(meta.ogDescription)}" />`,
+    `<link rel="canonical" href="${escapeHtmlAttr(meta.ogUrl)}" />`,
+    `<meta property="og:site_name" content="WithBroker" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:url" content="${escapeHtmlAttr(meta.ogUrl)}" />`,
+    `<meta property="og:title" content="${escapeHtmlAttr(meta.ogTitle)}" />`,
+    `<meta property="og:description" content="${escapeHtmlAttr(meta.ogDescription)}" />`,
+    `<meta property="og:image" content="${escapeHtmlAttr(meta.ogImage)}" />`,
+    `<meta property="og:image:secure_url" content="${escapeHtmlAttr(meta.ogImage)}" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta property="og:image:alt" content="${escapeHtmlAttr(meta.ogTitle)}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${escapeHtmlAttr(meta.ogTitle)}" />`,
+    `<meta name="twitter:description" content="${escapeHtmlAttr(meta.ogDescription)}" />`,
+    `<meta name="twitter:image" content="${escapeHtmlAttr(meta.ogImage)}" />`,
+    `<script type="application/ld+json">${meta.jsonLdString}</script>`,
+  ].join('\n    ');
+
   let html = baseHtml
     .replace(/<title>[\s\S]*?<\/title>/i, '')
     .replace(/<meta\s+name=["']description["'][^>]*>/gi, '')

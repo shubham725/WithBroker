@@ -14,7 +14,6 @@ import {
 import {
   PreferredGender,
   PublicRoommateListing,
-  ROOMMATE_PUNE_LOCATIONS,
   ROOMMATE_ROOM_TYPES,
   RoommateFiltersState,
   RoommateFlatOccupancy,
@@ -71,11 +70,15 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
   }, [externalFilterPreset]);
 
   const locationOptions = useMemo(() => {
-    const set = new Set<string>(ROOMMATE_PUNE_LOCATIONS);
+    const counts = new Map<string, number>();
     allRoommates.forEach((item) => {
-      if (item.location.trim()) set.add(item.location.trim());
+      const loc = item.location.trim();
+      if (!loc) return;
+      counts.set(loc, (counts.get(loc) ?? 0) + 1);
     });
-    return Array.from(set);
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([loc]) => loc);
   }, [allRoommates]);
 
   const filteredListings = useMemo(
@@ -103,7 +106,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
     <section
       id="roommates"
       aria-labelledby="roommates-section-heading"
-      className="scroll-mt-20 border-t border-[#090A14]/8 bg-white py-12 sm:py-16"
+      className="scroll-mt-20 border-t border-[#6B1CD4]/12 bg-white py-14 sm:py-18"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         {/* Editorial Section Header */}
@@ -112,11 +115,11 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
             <p className="text-xs font-semibold text-[#6B1CD4]">Roommate Connect · Pune</p>
             <h2
               id="roommates-section-heading"
-              className="mt-1 font-display text-2xl font-bold tracking-[-0.02em] text-[#090A14] sm:text-[28px]"
+              className="mt-1 font-display text-2xl font-bold tracking-[-0.02em] text-[#140A29] sm:text-[28px]"
             >
-              Roommate Vacancies in Pune
+              Roommate <span className="text-[#6B1CD4]">Vacancies</span> in Pune
             </h2>
-            <p className="mt-1.5 max-w-2xl text-sm text-[#5C5E6B]">
+            <p className="mt-1.5 max-w-2xl text-sm text-[#544E66]">
               Verified openings in pre-occupied and new flats with per-person rent, deposit,
               facilities, and joining dates.
             </p>
@@ -126,15 +129,15 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
             <button
               type="button"
               onClick={onOpenMyRoommates}
-              className="inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl border border-[#090A14]/14 bg-white px-3.5 py-2 text-xs font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4] sm:text-[13px]"
+              className="inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl border border-[#6B1CD4]/22 bg-white px-3.5 py-2 text-xs font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4] sm:text-[13px]"
             >
-              <LayoutDashboard className="h-3.5 w-3.5 text-[#5C5E6B]" aria-hidden="true" />
+              <LayoutDashboard className="h-3.5 w-3.5 text-[#6B1CD4]" aria-hidden="true" />
               <span>My Listings</span>
             </button>
             <button
               type="button"
               onClick={() => onOpenPostRoommate()}
-              className="inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#6B1CD4] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#5412AD] sm:text-[13px]"
+              className="inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-4 py-2 text-xs font-semibold text-white shadow-[0_10px_22px_-10px_rgba(107,28,212,0.5)] transition-all hover:from-[#6B1CD4] hover:to-[#4E11A8] sm:text-[13px]"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               <span>Post Roommate Vacancy</span>
@@ -143,14 +146,14 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
         </div>
 
         {/* Sleek Single-Row Marketplace Filter Bar */}
-        <div className="mt-6 rounded-2xl border border-[#090A14]/9 bg-[#FAFAFC] p-3 sm:p-3.5">
+        <div className="mt-6 rounded-2xl border border-[#6B1CD4]/14 bg-[#F7F3FF]/75 p-3 sm:p-3.5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-2">
               {/* Occupancy Segmented Control */}
               <div
                 role="group"
                 aria-label="Filter by flat occupancy"
-                className="inline-flex rounded-xl bg-[#ECECF2] p-0.5"
+                className="inline-flex rounded-xl border border-[#6B1CD4]/10 bg-[#E9DDFC] p-0.5"
               >
                 {(
                   [
@@ -169,8 +172,8 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                       }
                       className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                         active
-                          ? 'bg-white text-[#090A14] shadow-2xs'
-                          : 'text-[#5C5E6B] hover:text-[#090A14]'
+                          ? 'bg-white text-[#6B1CD4] shadow-2xs'
+                          : 'text-[#544E66] hover:text-[#140A29]'
                       }`}
                     >
                       {tab.label}
@@ -183,7 +186,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
               <div
                 role="group"
                 aria-label="Filter by Male or Female roommate"
-                className="inline-flex rounded-xl bg-[#ECECF2] p-0.5"
+                className="inline-flex rounded-xl border border-[#6B1CD4]/10 bg-[#E9DDFC] p-0.5"
               >
                 {(['all', 'Male', 'Female'] as const).map((g) => {
                   const active = filters.preferredGender === g;
@@ -199,8 +202,8 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                       }
                       className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                         active
-                          ? 'bg-white text-[#090A14] shadow-2xs'
-                          : 'text-[#5C5E6B] hover:text-[#090A14]'
+                          ? 'bg-white text-[#6B1CD4] shadow-2xs'
+                          : 'text-[#544E66] hover:text-[#140A29]'
                       }`}
                     >
                       {g === 'all' ? 'All Gender' : g}
@@ -219,7 +222,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                 id="rm-filter-loc"
                 value={filters.location}
                 onChange={(e) => setFilters((prev) => ({ ...prev, location: e.target.value }))}
-                className="h-9 rounded-lg border border-[#090A14]/12 bg-white px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
+                className="h-9 rounded-lg border border-[#6B1CD4]/18 bg-white px-3 text-xs font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4]/45 focus:border-[#6B1CD4] focus:outline-none"
               >
                 <option value="all">All Pune Areas</option>
                 {locationOptions.map((loc) => (
@@ -241,7 +244,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                     sortBy: e.target.value as RoommateSortOrder,
                   }))
                 }
-                className="h-9 rounded-lg border border-[#090A14]/12 bg-white px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
+                className="h-9 rounded-lg border border-[#6B1CD4]/18 bg-white px-3 text-xs font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4]/45 focus:border-[#6B1CD4] focus:outline-none"
               >
                 <option value="recent">Recently Posted</option>
                 <option value="rent-asc">Lowest Rent</option>
@@ -254,11 +257,11 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                 onClick={() => setShowMoreFilters((prev) => !prev)}
                 className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors ${
                   showMoreFilters || extraFilterCount > 0
-                    ? 'border-[#6B1CD4] bg-[#F7F3FD] text-[#6B1CD4]'
-                    : 'border-[#090A14]/12 bg-white text-[#090A14] hover:border-[#090A14]/30'
+                    ? 'border-[#6B1CD4] bg-[#EFE5FF] text-[#6B1CD4]'
+                    : 'border-[#6B1CD4]/18 bg-white text-[#140A29] hover:border-[#6B1CD4]/45'
                 }`}
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                <SlidersHorizontal className="h-3.5 w-3.5 text-[#6B1CD4]" aria-hidden="true" />
                 <span>Filters</span>
                 {extraFilterCount > 0 && (
                   <span className="tabular-nums">({extraFilterCount})</span>
@@ -280,11 +283,11 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
 
           {/* Expandable Extra Filters */}
           {showMoreFilters && (
-            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[#090A14]/8 pt-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[#6B1CD4]/12 pt-3 sm:grid-cols-2 lg:grid-cols-5">
               <div>
                 <label
                   htmlFor="rm-filter-room"
-                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                  className="block text-[11px] font-medium text-[#544E66]"
                 >
                   Flat / Room Type
                 </label>
@@ -297,7 +300,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                       roomType: e.target.value as 'all' | RoommateRoomType,
                     }))
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-white px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
+                  className="mt-1 h-9 w-full rounded-lg border border-[#6B1CD4]/18 bg-white px-3 text-xs font-semibold text-[#140A29] focus:border-[#6B1CD4] focus:outline-none"
                 >
                   <option value="all">All Types</option>
                   {ROOMMATE_ROOM_TYPES.map((rt) => (
@@ -311,7 +314,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
               <div>
                 <label
                   htmlFor="rm-filter-min"
-                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                  className="block text-[11px] font-medium text-[#544E66]"
                 >
                   Min Rent (₹)
                 </label>
@@ -328,14 +331,14 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                       minBudget: e.target.value.trim() ? Number(e.target.value) : null,
                     }))
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-white px-3 text-xs font-medium text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:outline-none"
+                  className="mt-1 h-9 w-full rounded-lg border border-[#6B1CD4]/18 bg-white px-3 text-xs font-medium text-[#140A29] tabular-nums focus:border-[#6B1CD4] focus:outline-none"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="rm-filter-max"
-                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                  className="block text-[11px] font-medium text-[#544E66]"
                 >
                   Max Rent (₹)
                 </label>
@@ -352,14 +355,14 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                       maxBudget: e.target.value.trim() ? Number(e.target.value) : null,
                     }))
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-white px-3 text-xs font-medium text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:outline-none"
+                  className="mt-1 h-9 w-full rounded-lg border border-[#6B1CD4]/18 bg-white px-3 text-xs font-medium text-[#140A29] tabular-nums focus:border-[#6B1CD4] focus:outline-none"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="rm-filter-furnishing"
-                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                  className="block text-[11px] font-medium text-[#544E66]"
                 >
                   Furnishing
                 </label>
@@ -372,7 +375,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                       furnishing: e.target.value as 'all' | RoommateFurnishing,
                     }))
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-white px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
+                  className="mt-1 h-9 w-full rounded-lg border border-[#6B1CD4]/18 bg-white px-3 text-xs font-semibold text-[#140A29] focus:border-[#6B1CD4] focus:outline-none"
                 >
                   <option value="all">Any Furnishing</option>
                   <option value="Furnished">Furnished</option>
@@ -384,7 +387,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
               <div>
                 <label
                   htmlFor="rm-filter-date"
-                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                  className="block text-[11px] font-medium text-[#544E66]"
                 >
                   Joining On or Before
                 </label>
@@ -395,7 +398,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                   onChange={(e) =>
                     setFilters((prev) => ({ ...prev, availableFrom: e.target.value }))
                   }
-                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-white px-3 text-xs font-medium text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
+                  className="mt-1 h-9 w-full rounded-lg border border-[#6B1CD4]/18 bg-white px-3 text-xs font-medium text-[#140A29] focus:border-[#6B1CD4] focus:outline-none"
                 />
               </div>
             </div>
@@ -403,12 +406,12 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
         </div>
 
         {/* Results Count */}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-xs text-[#5C5E6B]">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-xs text-[#544E66]">
           <p>
-            Showing <strong className="text-[#090A14] tabular-nums">{filteredListings.length}</strong>{' '}
+            Showing <strong className="text-[#140A29] tabular-nums">{filteredListings.length}</strong>{' '}
             active {filteredListings.length === 1 ? 'vacancy' : 'vacancies'}
           </p>
-          <p className="text-[11px] text-[#767887]">
+          <p className="text-[11px] text-[#7A7190]">
             Verified by WithBroker before publishing
           </p>
         </div>
@@ -417,21 +420,21 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
         {loading && allRoommates.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <Loader2 className="h-6 w-6 animate-spin text-[#6B1CD4]" />
-            <p className="text-sm font-medium text-[#5C5E6B]">
+            <p className="text-sm font-medium text-[#544E66]">
               Loading verified roommate vacancies...
             </p>
           </div>
         ) : filteredListings.length === 0 ? (
           <div
             data-testid="roommates-empty-state"
-            className="mt-6 rounded-2xl border border-[#090A14]/9 bg-[#FAFAFC] px-6 py-12 text-center"
+            className="mt-6 rounded-2xl border border-[#6B1CD4]/14 bg-[#F9F7FD] px-6 py-12 text-center"
           >
-            <h3 className="font-display text-lg font-bold text-[#090A14]">
+            <h3 className="font-display text-lg font-bold text-[#140A29]">
               {hasActiveFilters
                 ? 'No roommate vacancies match these filters'
                 : 'Have a flat or room? Post your roommate vacancy'}
             </h3>
-            <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-[#5C5E6B] sm:text-sm">
+            <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-[#544E66] sm:text-sm">
               {hasActiveFilters
                 ? 'Try clearing filters or selecting another Pune locality to view available roommate openings.'
                 : 'Looking for a Male or Female flatmate for a pre-occupied or new flat in Pune? Post free in 30 seconds with no login required.'}
@@ -441,7 +444,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#090A14]/15 bg-white px-4 text-xs font-semibold text-[#090A14] hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#6B1CD4]/22 bg-white px-4 text-xs font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
                 >
                   <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>Clear Filters</span>
@@ -450,7 +453,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
               <button
                 type="button"
                 onClick={() => onOpenPostRoommate({ flatOccupancy: 'Pre-Occupied Flat' })}
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#090A14] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#6B1CD4]"
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-4 text-xs font-semibold text-white shadow-[0_10px_20px_-10px_rgba(107,28,212,0.5)] transition-all hover:from-[#6B1CD4] hover:to-[#4E11A8]"
               >
                 <BedDouble className="h-4 w-4" aria-hidden="true" />
                 <span>Post Pre-Occupied Flat</span>
@@ -458,9 +461,9 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
               <button
                 type="button"
                 onClick={() => onOpenPostRoommate({ flatOccupancy: 'New Flat' })}
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#090A14]/15 bg-white px-4 text-xs font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-[#6B1CD4]/22 bg-white px-4 text-xs font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
               >
-                <Plus className="h-4 w-4" aria-hidden="true" />
+                <Plus className="h-4 w-4 text-[#6B1CD4]" aria-hidden="true" />
                 <span>Post New Flat</span>
               </button>
             </div>
@@ -489,10 +492,10 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                 <article
                   key={item.listingCode}
                   data-testid={`roommate-card-${item.listingCode}`}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-[#090A14]/9 bg-white transition-all duration-200 hover:border-[#090A14]/22 hover:shadow-[0_14px_30px_-16px_rgba(9,10,20,0.14)]"
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-[#6B1CD4]/12 bg-white transition-all duration-200 hover:border-[#6B1CD4]/36 hover:shadow-[0_18px_36px_-20px_rgba(95,24,200,0.22)]"
                 >
                   {/* Clean Visual Frame */}
-                  <div className="relative h-44 w-full overflow-hidden bg-[#F3F3F7]">
+                  <div className="relative h-44 w-full overflow-hidden bg-[#F1EBFC]">
                     {hasPhoto ? (
                       <button
                         type="button"
@@ -510,21 +513,21 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                       <button
                         type="button"
                         onClick={() => onViewDetails(item)}
-                        className="flex h-full w-full flex-col items-start justify-end bg-[#F4F4F8] p-5 text-left"
+                        className="flex h-full w-full flex-col items-start justify-end bg-gradient-to-br from-[#F7F2FF] to-[#EDE2FF] p-5 text-left"
                       >
                         <span className="text-[11px] font-semibold text-[#6B1CD4]">
                           {occupancy} · {item.furnishing}
                         </span>
-                        <p className="mt-1 font-display text-base font-bold text-[#090A14]">
+                        <p className="mt-1 font-display text-base font-bold text-[#140A29]">
                           {headline}
                         </p>
-                        <p className="mt-0.5 text-xs text-[#5C5E6B]">{item.location}</p>
+                        <p className="mt-0.5 text-xs text-[#544E66]">{item.location}</p>
                       </button>
                     )}
 
                     {/* Minimal Top-Left Occupancy & Optional Urgent Label */}
                     <div className="pointer-events-none absolute top-3 left-3 flex items-center gap-1.5">
-                      <span className="rounded-lg bg-[#090A14]/82 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-xs">
+                      <span className="rounded-lg bg-[#1B0D36]/86 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-xs">
                         {occupancy}
                       </span>
                       {item.urgent && (
@@ -541,12 +544,12 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                     {/* Price + Code Row */}
                     <div className="flex items-baseline justify-between gap-2">
                       <div className="flex items-baseline gap-1.5">
-                        <span className="font-display text-[22px] font-bold tracking-[-0.015em] text-[#090A14] tabular-nums">
+                        <span className="font-display text-[22px] font-bold tracking-[-0.015em] text-[#140A29] tabular-nums">
                           {formatINR(item.rent)}
                         </span>
-                        <span className="text-xs font-medium text-[#5C5E6B]">/person</span>
+                        <span className="text-xs font-medium text-[#544E66]">/person</span>
                       </div>
-                      <span className="text-[11px] font-medium text-[#767887] tabular-nums">
+                      <span className="text-[11px] font-medium text-[#7A7190] tabular-nums">
                         {item.listingCode}
                       </span>
                     </div>
@@ -557,32 +560,32 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                       onClick={() => onViewDetails(item)}
                       className="mt-1.5 text-left"
                     >
-                      <h3 className="font-display text-[15px] sm:text-base font-bold leading-snug text-[#090A14] transition-colors hover:text-[#6B1CD4]">
+                      <h3 className="font-display text-[15px] sm:text-base font-bold leading-snug text-[#140A29] transition-colors hover:text-[#6B1CD4]">
                         {headline}
                       </h3>
                     </button>
-                    <p className="mt-1 flex items-start gap-1.5 text-xs text-[#5C5E6B]">
+                    <p className="mt-1 flex items-start gap-1.5 text-xs text-[#544E66]">
                       <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6B1CD4]" aria-hidden="true" />
                       <span className="line-clamp-2">{fullLoc}</span>
                     </p>
 
                     {/* Clean Hairline Specs Row */}
-                    <div className="mt-3.5 grid grid-cols-3 gap-2 border-y border-[#090A14]/8 py-2.5 text-left">
+                    <div className="mt-3.5 grid grid-cols-3 gap-2 border-y border-[#6B1CD4]/10 py-2.5 text-left">
                       <div className="min-w-0">
-                        <span className="block text-[11px] text-[#6B6D7C]">Deposit</span>
-                        <p className="mt-0.5 truncate text-xs font-semibold text-[#090A14] tabular-nums">
+                        <span className="block text-[11px] text-[#6A637D]">Deposit</span>
+                        <p className="mt-0.5 truncate text-xs font-semibold text-[#140A29] tabular-nums">
                           {item.deposit > 0 ? formatINR(item.deposit) : 'None'}
                         </p>
                       </div>
                       <div className="min-w-0">
-                        <span className="block text-[11px] text-[#6B6D7C]">For</span>
-                        <p className="mt-0.5 truncate text-xs font-semibold text-[#090A14]">
+                        <span className="block text-[11px] text-[#6A637D]">For</span>
+                        <p className="mt-0.5 truncate text-xs font-semibold text-[#140A29]">
                           {item.preferredGender}
                         </p>
                       </div>
                       <div className="min-w-0">
-                        <span className="block text-[11px] text-[#6B6D7C]">Electricity</span>
-                        <p className="mt-0.5 truncate text-xs font-semibold text-[#090A14]">
+                        <span className="block text-[11px] text-[#6A637D]">Electricity</span>
+                        <p className="mt-0.5 truncate text-xs font-semibold text-[#140A29]">
                           {item.electricityBill || 'Shared'}
                         </p>
                       </div>
@@ -590,14 +593,14 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
 
                     {/* Unboxed Facilities & Joining Metadata */}
                     {visibleFacilities.length > 0 && (
-                      <p className="mt-3 truncate text-xs text-[#5C5E6B]">
+                      <p className="mt-3 truncate text-xs text-[#544E66]">
                         {visibleFacilities.join(' · ')}
                         {extraFacCount > 0 ? ` · +${extraFacCount} more` : ''}
                       </p>
                     )}
 
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[#5C5E6B]">
-                      <span className="inline-flex items-center gap-1.5 font-medium text-[#090A14]">
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[#544E66]">
+                      <span className="inline-flex items-center gap-1.5 font-medium text-[#140A29]">
                         <Calendar className="h-3.5 w-3.5 text-[#6B1CD4]" aria-hidden="true" />
                         <span>Joining {formatRoommateDate(item.availableFrom)}</span>
                       </span>
@@ -613,7 +616,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                       <button
                         type="button"
                         onClick={() => onViewDetails(item)}
-                        className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-xl border border-[#090A14]/14 bg-white px-3 text-xs sm:text-[13px] font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                        className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-xl border border-[#6B1CD4]/20 bg-white px-3 text-xs sm:text-[13px] font-semibold text-[#140A29] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
                       >
                         Details
                       </button>
@@ -632,7 +635,7 @@ export const RoommateSection: React.FC<RoommateSectionProps> = ({
                         type="button"
                         onClick={() => onShareListing(item)}
                         aria-label={`Share roommate vacancy ${item.listingCode}`}
-                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#090A14]/14 bg-white text-[#5C5E6B] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
+                        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#6B1CD4]/20 bg-white text-[#544E66] transition-colors hover:border-[#6B1CD4] hover:bg-[#F7F3FF] hover:text-[#6B1CD4]"
                       >
                         <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>

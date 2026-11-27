@@ -1,5 +1,6 @@
 import { WEBSITE_URL } from '../data/properties';
 import type { PropertyListing } from '../types/property';
+import type { PublicRoommateListing } from '../types/roommate';
 import { formatINR } from './propertyLogic';
 
 const PHOTO_PREFIX = 'fbphoto://';
@@ -8,6 +9,7 @@ const VALID_PHOTO_ID_RE = /^[A-Za-z0-9_-]{4,128}$/;
 export interface ParsedAppRoute {
   view: 'public' | 'admin' | 'owner-form';
   propertyId: string | null;
+  roommateId: string | null;
   openPostModal: boolean;
   openPostRoommateModal?: boolean;
   openMyRoommatesModal?: boolean;
@@ -46,6 +48,7 @@ export function parseAppRoute(
     return {
       view: 'admin',
       propertyId: null,
+      roommateId: null,
       openPostModal: false,
       isUnknownRoute: false,
       originalPath: cleanPath,
@@ -62,6 +65,7 @@ export function parseAppRoute(
     return {
       view: 'owner-form',
       propertyId: null,
+      roommateId: null,
       openPostModal: false,
       isUnknownRoute: false,
       originalPath: cleanPath,
@@ -72,6 +76,7 @@ export function parseAppRoute(
     return {
       view: 'public',
       propertyId: null,
+      roommateId: null,
       openPostModal: true,
       isUnknownRoute: false,
       originalPath: cleanPath,
@@ -82,6 +87,7 @@ export function parseAppRoute(
     return {
       view: 'public',
       propertyId: null,
+      roommateId: null,
       openPostModal: false,
       openPostRoommateModal: true,
       isUnknownRoute: false,
@@ -93,23 +99,9 @@ export function parseAppRoute(
     return {
       view: 'public',
       propertyId: null,
+      roommateId: null,
       openPostModal: false,
       openMyRoommatesModal: true,
-      isUnknownRoute: false,
-      originalPath: cleanPath,
-    };
-  }
-
-  if (
-    lowerHash === '#roommates' ||
-    lowerPath === '/roommates' ||
-    lowerPath === '/find-roommate'
-  ) {
-    return {
-      view: 'public',
-      propertyId: null,
-      openPostModal: false,
-      scrollToRoommates: true,
       isUnknownRoute: false,
       originalPath: cleanPath,
     };
@@ -126,17 +118,54 @@ export function parseAppRoute(
     return {
       view: 'public',
       propertyId: decodedId || null,
+      roommateId: null,
       openPostModal: false,
       isUnknownRoute: !decodedId,
       originalPath: cleanPath,
     };
   }
 
+  const roommateMatch = /^\/roommates?\/([^/?#]+)$/i.exec(cleanPath);
+  if (roommateMatch?.[1]) {
+    let decodedCode = roommateMatch[1];
+    try {
+      decodedCode = decodeURIComponent(roommateMatch[1]).trim();
+    } catch {
+      decodedCode = roommateMatch[1].trim();
+    }
+    return {
+      view: 'public',
+      propertyId: null,
+      roommateId: decodedCode || null,
+      openPostModal: false,
+      isUnknownRoute: !decodedCode,
+      originalPath: cleanPath,
+    };
+  }
+
+  if (
+    lowerHash === '#roommates' ||
+    lowerPath === '/roommates' ||
+    lowerPath === '/find-roommate'
+  ) {
+    return {
+      view: 'public',
+      propertyId: null,
+      roommateId: params.get('roommate')?.trim() || null,
+      openPostModal: false,
+      scrollToRoommates: true,
+      isUnknownRoute: false,
+      originalPath: cleanPath,
+    };
+  }
+
   const queryFlat = params.get('flat')?.trim() || null;
+  const queryRoommate = params.get('roommate')?.trim() || null;
   if (KNOWN_PUBLIC_PATHS.has(lowerPath)) {
     return {
       view: 'public',
       propertyId: queryFlat,
+      roommateId: queryRoommate,
       openPostModal: false,
       isUnknownRoute: false,
       originalPath: cleanPath,
@@ -147,6 +176,7 @@ export function parseAppRoute(
   return {
     view: 'public',
     propertyId: queryFlat,
+    roommateId: queryRoommate,
     openPostModal: false,
     isUnknownRoute: true,
     originalPath: cleanPath,
@@ -191,7 +221,8 @@ export function resolveClientAbsoluteImageUrl(firstImage: string | undefined, or
 export function buildClientPageMetadata(
   property: PropertyListing | null,
   view: 'public' | 'admin' | 'owner-form',
-  origin: string
+  origin: string,
+  roommate: PublicRoommateListing | null = null
 ): PageMetaPayload {
   const cleanOrigin = (origin || WEBSITE_URL).replace(/\/+$/, '');
 
@@ -254,6 +285,62 @@ export function buildClientPageMetadata(
     };
   }
 
+  if (roommate) {
+    const rentFormatted = formatINR(roommate.rent);
+    const genderLabel =
+      roommate.preferredGender === 'Any' ? 'Roommate' : `${roommate.preferredGender} Roommate`;
+    const count = Math.max(1, roommate.peopleRequired || 1);
+    const headline = `${count} ${genderLabel}${count > 1 ? 's' : ''} Required · ${roommate.roomType}`;
+    const fullLoc = [roommate.publicBuildingName, roommate.location].filter(Boolean).join(', ');
+    const title = `${headline} – ${rentFormatted}/person | WithBroker`;
+    const snippet = (roommate.description || '').trim();
+    const shortSnippet = snippet.length > 120 ? `${snippet.slice(0, 117).trim()}...` : snippet;
+    const description = [
+      `Rent: ${rentFormatted}/person`,
+      `Location: ${fullLoc}`,
+      shortSnippet || `${roommate.furnishing} ${roommate.roomType} roommate vacancy on WithBroker.`,
+    ]
+      .filter(Boolean)
+      .join(' · ')
+      .slice(0, 240);
+
+    const canonicalUrl = `${cleanOrigin}/roommate/${encodeURIComponent(roommate.listingCode)}`;
+    const ogImage = resolveClientAbsoluteImageUrl(roommate.images[0], cleanOrigin);
+
+    return {
+      title,
+      description,
+      ogTitle: title,
+      ogDescription: description,
+      ogImage,
+      ogImageAlt: `${headline} in ${roommate.location}`,
+      ogUrl: canonicalUrl,
+      ogType: 'website',
+      canonicalUrl,
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'Accommodation',
+        name: headline,
+        description,
+        image: ogImage,
+        url: canonicalUrl,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: fullLoc,
+          addressLocality: 'Pune',
+          addressRegion: 'Maharashtra',
+          addressCountry: 'IN',
+        },
+        offers: {
+          '@type': 'Offer',
+          price: String(roommate.rent),
+          priceCurrency: 'INR',
+          availability: 'https://schema.org/InStock',
+        },
+      },
+    };
+  }
+
   if (view === 'owner-form') {
     const title = 'Add Your Rental Property Free | WithBroker Pune';
     const description =
@@ -280,19 +367,18 @@ export function buildClientPageMetadata(
     };
   }
 
-  const defaultTitle =
-    'WithBroker — Rental Apartments in Viman Nagar, Wadgaon Sheri & Somnath Nagar, Pune';
+  const defaultTitle = 'WithBroker — Rental Apartments & Roommates in Pune';
   const defaultDesc =
-    'Find 1RK, 1BHK, 2BHK and 3BHK rental flats in Viman Nagar, Wadgaon Sheri, Somnath Nagar and nearby Pune areas with transparent rent, deposit, brokerage details, and direct WhatsApp contact.';
+    'Find verified 1RK, 1BHK, 2BHK and 3BHK rental flats and roommate vacancies across Pune with transparent rent, deposit, brokerage details, and direct WhatsApp contact.';
   const defaultUrl = `${cleanOrigin}/`;
   const defaultImage = `${cleanOrigin}/assets/properties/flat-1/photo-1.jpeg`;
 
   return {
     title: view === 'admin' ? 'Admin Console | WithBroker' : defaultTitle,
     description: defaultDesc,
-    ogTitle: 'WithBroker — Rental Apartments in Pune',
+    ogTitle: 'WithBroker — Rental Apartments & Roommates in Pune',
     ogDescription:
-      'Explore available 1RK, 1BHK and 2BHK apartments in Viman Nagar, Wadgaon Sheri, Somnath Nagar and nearby Pune locations.',
+      'Explore verified 1RK, 1BHK, 2BHK and 3BHK rental apartments and roommate vacancies across Pune.',
     ogImage: defaultImage,
     ogImageAlt: 'WithBroker — Verified Rental Apartments in Pune',
     ogUrl: defaultUrl,
@@ -349,11 +435,12 @@ function upsertJsonLd(jsonLd: Record<string, unknown>): void {
 
 /**
  * Synchronizes document.title, OpenGraph tags, Twitter Card tags, canonical link,
- * and Schema.org JSON-LD in the browser <head> for the currently viewed property or page.
+ * and Schema.org JSON-LD in the browser <head> for the currently viewed property, roommate, or page.
  */
 export function applyClientDocumentMetadata(
   property: PropertyListing | null,
-  view: 'public' | 'admin' | 'owner-form'
+  view: 'public' | 'admin' | 'owner-form',
+  roommate: PublicRoommateListing | null = null
 ): void {
   if (typeof document === 'undefined' || typeof window === 'undefined') return;
   const origin =
@@ -361,7 +448,7 @@ export function applyClientDocumentMetadata(
       ? window.location.origin
       : WEBSITE_URL;
 
-  const meta = buildClientPageMetadata(property, view, origin);
+  const meta = buildClientPageMetadata(property, view, origin, roommate);
 
   document.title = meta.title;
   upsertCanonicalLink(meta.canonicalUrl);

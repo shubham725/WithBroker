@@ -1,6 +1,6 @@
 {
   "name": "WithBroker",
-  "description": "Hyperlocal rental apartment discovery platform for Pune — Viman Nagar, Wadgaon Sheri, Somnath Nagar, and nearby areas.",
+  "description": "Rental apartment and roommate discovery platform across Pune, expanding to more locations.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

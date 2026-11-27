@@ -11,7 +11,9 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
+import { BASELINE_ROOMMATE_LISTINGS } from '../data/roommates';
 import type {
   PublicRoommateListing,
   RoommateDashboardStats,
@@ -46,6 +48,8 @@ const ROOMMATE_PUBLIC_COLLECTION = 'public_roommates';
 const ROOMMATE_REPORTS_COLLECTION = 'roommate_reports';
 const PHOTOS_COLLECTION = 'property_photos';
 const NOTIFICATIONS_COLLECTION = 'admin_notifications';
+const META_COLLECTION = 'app_meta';
+const ROOMMATE_SEED_META_DOC = 'roommates_seed_v1';
 const PHOTO_PREFIX = 'fbphoto://';
 const ROOMMATE_COOLDOWN_KEY = 'withbroker-roommate-last-submit-ts';
 
@@ -197,6 +201,8 @@ function mapDocToMasterRoommate(
 
 /**
  * Real-time public subscription to approved, active, non-expired roommate listings.
+ * Merges verified baseline roommate listings until the sole admin signs in once
+ * and seeds them into Firestore (so admin edits/deletes remain authoritative).
  */
 export function subscribePublicRoommates(
   onUpdate: (listings: PublicRoommateListing[]) => void,
@@ -207,13 +213,40 @@ export function subscribePublicRoommates(
     where('status', '==', 'Active')
   );
 
+  let seededFlagChecked = false;
+  let isRoommateSeeded = false;
+
+  const checkSeededMeta = async () => {
+    if (seededFlagChecked) return isRoommateSeeded;
+    seededFlagChecked = true;
+    try {
+      const metaSnap = await getDoc(doc(db, META_COLLECTION, ROOMMATE_SEED_META_DOC));
+      isRoommateSeeded = metaSnap.exists() && metaSnap.data()?.seeded === true;
+    } catch {
+      isRoommateSeeded = false;
+    }
+    return isRoommateSeeded;
+  };
+
   return onSnapshot(
     publicQuery,
-    (snapshot) => {
+    async (snapshot) => {
       const items = snapshot.docs.map((d) =>
         mapDocToPublicRoommate(d.id, d.data() as Record<string, unknown>)
       );
-      const activeNonExpired = getActivePublicRoommates(items);
+
+      const alreadySeeded = await checkSeededMeta();
+      let combined = items;
+
+      if (!alreadySeeded) {
+        const existingCodes = new Set(items.map((item) => item.listingCode));
+        const missingBaselines = BASELINE_ROOMMATE_LISTINGS.filter(
+          (base) => !existingCodes.has(base.listingCode)
+        );
+        combined = [...items, ...missingBaselines];
+      }
+
+      const activeNonExpired = getActivePublicRoommates(combined);
       activeNonExpired.sort((a, b) => {
         const tA = new Date(a.approvedAt || a.createdAt || 0).getTime();
         const tB = new Date(b.approvedAt || b.createdAt || 0).getTime();
@@ -223,10 +256,130 @@ export function subscribePublicRoommates(
     },
     (error) => {
       console.error('Public roommates snapshot error:', error);
-      onUpdate([]);
+      onUpdate(getActivePublicRoommates(BASELINE_ROOMMATE_LISTINGS));
       onError?.(error instanceof Error ? error : new Error(String(error)));
     }
   );
+}
+
+/**
+ * Sole Admin: Seeds verified baseline roommate vacancies into Firestore once
+ * (`roommate_listings` + `public_roommates` + `app_meta/roommates_seed_v1`)
+ * so they are 100% manageable, editable, fulfillable, and deletable in Admin.
+ */
+export async function ensureInitialRoommatesSeededByAdmin(): Promise<void> {
+  try {
+    const metaRef = doc(db, META_COLLECTION, ROOMMATE_SEED_META_DOC);
+    const metaSnap = await getDoc(metaRef);
+    if (metaSnap.exists() && metaSnap.data()?.seeded === true) {
+      return;
+    }
+
+    const batch = writeBatch(db);
+    const expiryTs = buildExpiryTimestamp(45);
+
+    for (const item of BASELINE_ROOMMATE_LISTINGS) {
+      const code = item.listingCode;
+      const inferred = inferAreaMeta(`${item.publicBuildingName || ''} ${item.location}`);
+      const slug = item.localitySlug || inferred.slug;
+
+      batch.set(doc(db, ROOMMATE_MASTER_COLLECTION, code), {
+        listingCode: code,
+        userId: item.userId,
+        listingType: item.listingType,
+        flatOccupancy: item.flatOccupancy ?? 'Pre-Occupied Flat',
+        electricityBill: item.electricityBill ?? null,
+        facilities: (item.facilities ?? []).slice(0, 15),
+        urgent: Boolean(item.urgent),
+        shiftingNow: Boolean(item.shiftingNow),
+        name: 'WithBroker Team',
+        contactNumber: '9834626078',
+        whatsappNumber: '9834626078',
+        secondaryContact: null,
+        gender: item.gender,
+        age: item.age,
+        occupation: item.occupation,
+        roomType: item.roomType,
+        location: item.location.slice(0, 160),
+        localitySlug: slug,
+        buildingName: item.publicBuildingName ? item.publicBuildingName.slice(0, 160) : null,
+        showExactAddress: Boolean(item.showExactAddress),
+        showPublicContact: Boolean(item.showPublicContact),
+        rent: item.rent,
+        deposit: item.deposit,
+        brokerage: item.brokerage,
+        furnishing: item.furnishing,
+        availableFrom: item.availableFrom,
+        existingRoommates: item.existingRoommates,
+        peopleRequired: item.peopleRequired,
+        preferredGender: item.preferredGender,
+        preferredOccupation: item.preferredOccupation,
+        preferredAgeRange: item.preferredAgeRange ?? null,
+        foodPreference: item.foodPreference ?? null,
+        smokingPreference: item.smokingPreference ?? null,
+        description: item.description.slice(0, 2000),
+        images: item.images.slice(0, 8),
+        status: 'Active',
+        rejectionReason: null,
+        reportCount: 0,
+        createdAt: serverTimestamp(),
+        approvedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        expiresAt: expiryTs,
+      });
+
+      batch.set(doc(db, ROOMMATE_PUBLIC_COLLECTION, code), {
+        listingCode: code,
+        userId: item.userId,
+        listingType: item.listingType,
+        flatOccupancy: item.flatOccupancy ?? 'Pre-Occupied Flat',
+        electricityBill: item.electricityBill ?? null,
+        facilities: (item.facilities ?? []).slice(0, 15),
+        urgent: Boolean(item.urgent),
+        shiftingNow: Boolean(item.shiftingNow),
+        posterFirstName: item.posterFirstName.slice(0, 60),
+        gender: item.gender,
+        age: item.age,
+        occupation: item.occupation,
+        roomType: item.roomType,
+        location: item.location.slice(0, 160),
+        localitySlug: slug,
+        publicBuildingName: item.publicBuildingName ? item.publicBuildingName.slice(0, 160) : null,
+        showExactAddress: Boolean(item.showExactAddress),
+        showPublicContact: Boolean(item.showPublicContact),
+        publicWhatsappNumber: item.publicWhatsappNumber ?? null,
+        publicSecondaryContact: item.publicSecondaryContact ?? null,
+        rent: item.rent,
+        deposit: item.deposit,
+        brokerage: item.brokerage,
+        furnishing: item.furnishing,
+        availableFrom: item.availableFrom,
+        existingRoommates: item.existingRoommates,
+        peopleRequired: item.peopleRequired,
+        preferredGender: item.preferredGender,
+        preferredOccupation: item.preferredOccupation,
+        preferredAgeRange: item.preferredAgeRange ?? null,
+        foodPreference: item.foodPreference ?? null,
+        smokingPreference: item.smokingPreference ?? null,
+        description: item.description.slice(0, 2000),
+        images: item.images.slice(0, 8),
+        status: 'Active',
+        createdAt: serverTimestamp(),
+        approvedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        expiresAt: expiryTs,
+      });
+    }
+
+    batch.set(metaRef, {
+      seeded: true,
+      seededAt: serverTimestamp(),
+    });
+
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `${META_COLLECTION}/${ROOMMATE_SEED_META_DOC}`);
+  }
 }
 
 /**
