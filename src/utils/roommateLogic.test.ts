@@ -380,6 +380,7 @@ test('buildRoommateWhatsAppUrl targets 9834626078 with exact pre-filled Listing 
   assert.ok(shareText.includes('Available for shifting now'));
   assert.ok(shareText.includes('WB-RM-1001'));
   assert.ok(shareText.includes('View on WithBroker:\nhttps://withbroker.vercel.app/roommate/WB-RM-1001'));
+  assert.ok(shareText.includes('https://chat.whatsapp.com/CgdMS4NKPhREBqfuUPRcct'));
   assert.equal(shareText.includes('withbroker.vercel.app//'), false);
 });
 

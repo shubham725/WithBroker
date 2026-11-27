@@ -284,6 +284,7 @@ test('getPropertyDirectUrl, buildWhatsAppPropertyShareText, and injectPropertyOg
   assert.ok(waShare.includes('💰 Rent: ₹21,000/month'));
   assert.ok(waShare.includes('📍 Location: Near Phoenix Mall, Wadgaon Sheri, Pune'));
   assert.ok(waShare.includes('View full details and photos:\nhttps://withbroker.vercel.app/property/WB-1001'));
+  assert.ok(waShare.includes(WHATSAPP_COMMUNITY_URL));
   assert.ok(waShare.includes('Listed on WITHBROKER'));
 
   const baseHtml = '<!doctype html><html><head><title>Old</title><meta property="og:title" content="Old" /></head><body><div id="root"></div></body></html>';

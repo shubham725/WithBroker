@@ -1,4 +1,9 @@
-import { WEBSITE_URL, WHATSAPP_NUMBER_DIGITS } from '../data/properties';
+import {
+  WEBSITE_URL,
+  WHATSAPP_COMMUNITY_NAME,
+  WHATSAPP_COMMUNITY_URL,
+  WHATSAPP_NUMBER_DIGITS,
+} from '../data/properties';
 import type {
   PublicRoommateListing,
   RoommateDashboardStats,
@@ -430,6 +435,9 @@ export function buildRoommateShareText(
     '',
     'View on WithBroker:',
     directUrl,
+    '',
+    `👥 Join ${WHATSAPP_COMMUNITY_NAME} (WhatsApp Group):`,
+    WHATSAPP_COMMUNITY_URL,
     '',
     'WITHBROKER — RENT • SEARCH • CONNECT'
   );

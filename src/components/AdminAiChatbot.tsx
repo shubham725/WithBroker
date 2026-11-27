@@ -28,8 +28,8 @@ import type {
   AdminAiChatResponsePayload,
   AiExtractedPropertyDraft,
 } from '../types/aiPropertyChat';
-import { WEBSITE_URL } from '../data/properties';
-import { formatINR } from '../utils/propertyLogic';
+import { WHATSAPP_COMMUNITY_NAME, WHATSAPP_COMMUNITY_URL } from '../data/properties';
+import { formatINR, getPublicPropertyShareUrl } from '../utils/propertyLogic';
 import { WhatsAppIcon } from './WhatsAppButton';
 
 interface AdminAiChatbotProps {
@@ -384,7 +384,7 @@ export const AdminAiChatbot: React.FC<AdminAiChatbotProps> = ({
 
   const handleCopyShareLink = async (propertyCode: string) => {
     try {
-      await navigator.clipboard.writeText(WEBSITE_URL);
+      await navigator.clipboard.writeText(getPublicPropertyShareUrl(propertyCode));
       setCopiedCode(propertyCode);
       setTimeout(() => setCopiedCode((prev) => (prev === propertyCode ? null : prev)), 2500);
     } catch {
@@ -749,7 +749,7 @@ export const AdminAiChatbot: React.FC<AdminAiChatbotProps> = ({
                         </button>
                         <a
                           href={`https://wa.me/?text=${encodeURIComponent(
-                            `🏠 ${msg.createdResult.title}\n🆔 Property ID: ${msg.createdResult.propertyCode}\n\n💰 Rent: ${formatINR(msg.createdResult.monthlyRent)}/month\n📍 Location: ${msg.createdResult.location}\n\nView full details and photos:\n${WEBSITE_URL}\n\nListed on WITHBROKER\nRENT • SEARCH • CONNECT`
+                            `🏠 ${msg.createdResult.title}\n🆔 Property ID: ${msg.createdResult.propertyCode}\n\n💰 Rent: ${formatINR(msg.createdResult.monthlyRent)}/month\n📍 Location: ${msg.createdResult.location}\n\nView full details and photos:\n${getPublicPropertyShareUrl(msg.createdResult.propertyCode)}\n\n👥 Join ${WHATSAPP_COMMUNITY_NAME} (WhatsApp Group):\n${WHATSAPP_COMMUNITY_URL}\n\nListed on WITHBROKER\nRENT • SEARCH • CONNECT`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
