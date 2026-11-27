@@ -52,6 +52,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       label: loc.slug === 'other' ? 'Nearby Areas' : loc.name,
     })),
   ];
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearchSubmit();
@@ -60,108 +61,104 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   return (
     <section
       id="home"
-      className="relative overflow-hidden bg-gradient-to-br from-[#FAF7FF] via-[#F3ECFF] to-[#E9DDFB] pb-8 sm:pb-10 lg:pt-12 lg:pb-12"
+      className="relative overflow-hidden bg-gradient-to-br from-[#F7F3FF] via-[#F2ECFE] to-[#EAE0FC] pb-9 sm:pb-11 lg:pt-12 lg:pb-12"
     >
-      {/* Mobile Seamless Top Banner (Edge-to-edge, vivid building, feathered bottom edge) */}
-      <div className="relative h-48 w-full overflow-hidden sm:h-60 md:hidden">
+      {/* Mobile Top Architectural Banner */}
+      <div className="relative h-52 w-full overflow-hidden sm:h-64 md:hidden">
         <img
           src={HERO_IMAGE_URL}
           alt="Modern residential apartment building in Pune with landscaped greenery"
-          className="h-full w-full object-cover object-[54%_32%] contrast-[1.04] saturate-[1.06] [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]"
+          className="h-full w-full object-cover object-[54%_32%] contrast-[1.03] saturate-[1.06] [mask-image:linear-gradient(to_bottom,black_68%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_68%,transparent_100%)]"
         />
       </div>
 
-      {/* Desktop / Tablet Seamless Right-Side Panoramic Banner (UI Template Style, crisp & low transparency) */}
+      {/* Desktop / Tablet Seamless Panoramic Right-Side Banner (Zero Visible Seam) */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 hidden w-[68%] overflow-hidden md:block lg:w-[64%] xl:w-[62%]"
+        className="pointer-events-none absolute inset-y-0 right-0 hidden w-[70%] overflow-hidden md:block lg:w-[66%] xl:w-[64%]"
       >
         <img
           src={HERO_IMAGE_URL}
           alt=""
-          className="h-full w-full object-cover object-[56%_28%] contrast-[1.04] saturate-[1.08] [mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.45)_16%,rgba(0,0,0,0.92)_30%,black_44%,black_100%)] [-webkit-mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.45)_16%,rgba(0,0,0,0.92)_30%,black_44%,black_100%)]"
+          className="h-full w-full object-cover object-[58%_28%] contrast-[1.03] saturate-[1.07] [mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.08)_10%,rgba(0,0,0,0.55)_24%,rgba(0,0,0,0.92)_38%,black_52%,black_100%)] [-webkit-mask-image:linear-gradient(to_right,transparent_0%,rgba(0,0,0,0.08)_10%,rgba(0,0,0,0.55)_24%,rgba(0,0,0,0.92)_38%,black_52%,black_100%)]"
         />
-        {/* Subtle sky tint along the very top-left sky only, leaving the building 100% crisp */}
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#ECE2FC]/45 via-[#ECE2FC]/10 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#F2ECFE]/40 to-transparent" />
       </div>
 
-      {/* Subtle Ambient Glow Left */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[#6B1CD4]/8 blur-3xl"
-      />
-
-      {/* Sweeping Bottom Wave Layers Matching UI Template */}
+      {/* Subtle Bottom Wave Transition Matching Reference */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] overflow-hidden leading-none"
       >
         <svg
-          viewBox="0 0 1440 120"
+          viewBox="0 0 1440 110"
           preserveAspectRatio="none"
-          className="h-14 w-full sm:h-20 lg:h-24"
+          className="h-12 w-full sm:h-16 lg:h-20"
         >
           <path
-            d="M0,48 C280,104 620,96 960,54 C1180,26 1340,18 1440,32 L1440,120 L0,120 Z"
+            d="M0,48 C300,98 660,94 980,54 C1190,28 1345,22 1440,34 L1440,110 L0,110 Z"
             fill="#EAE0FA"
             fillOpacity="0.65"
           />
           <path
-            d="M0,28 C220,96 580,106 940,70 C1180,46 1350,48 1440,68 L1440,120 L0,120 Z"
-            fill="#F9F8FC"
+            d="M0,30 C240,94 600,102 960,68 C1190,46 1355,48 1440,66 L1440,110 L0,110 Z"
+            fill="#F8F8FA"
           />
         </svg>
       </div>
 
+      {/* Strictly Aligned Content Container */}
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 md:pt-8 lg:pt-2">
-        {/* Left-Aligned Hero Copy with Clear Breathing Room Over Feathered Backdrop */}
-        <div className="max-w-xl md:max-w-[490px] lg:max-w-[540px]">
-          {/* City Anchor */}
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#6B1CD4]/18 bg-white/95 px-3 py-1 text-xs font-semibold text-[#090A14] shadow-2xs">
+        {/* Left-Aligned Hero Copy Block */}
+        <div className="max-w-xl md:max-w-[500px] lg:max-w-[540px]">
+          {/* Location Pill */}
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#6B1CD4]/18 bg-white/95 px-3.5 py-1.5 text-xs font-semibold text-[#090A14] shadow-2xs">
             <MapPin className="h-3.5 w-3.5 text-[#6B1CD4]" aria-hidden="true" />
             <span>Pune, Maharashtra</span>
           </div>
 
           {/* Primary Headline */}
-          <h1 className="mt-4 font-display text-3xl font-bold tracking-tight text-[#090A14] text-balance sm:text-[44px] sm:leading-[1.12] lg:text-[48px]">
-            Find Your Perfect{' '}
+          <h1 className="mt-4 font-display text-[32px] leading-[1.12] font-bold tracking-[-0.025em] text-[#090A14] sm:text-[46px] lg:text-[52px]">
+            Find Your Perfect
+            <br />
             <span className="text-[#6B1CD4]">Rental Home</span> in Pune
           </h1>
 
           {/* Subtitle */}
-          <p className="mt-3.5 max-w-md text-sm leading-relaxed text-[#4E4A5E] sm:text-base">
-            Explore available 1RK, 1BHK, 2BHK apartments in Viman Nagar, Wadgaon Sheri, Somnath Nagar and nearby areas.
+          <p className="mt-4 max-w-[465px] text-sm leading-relaxed text-[#4E4A5E] sm:text-[15.5px]">
+            Explore available 1RK, 1BHK, 2BHK apartments in Viman Nagar, Wadgaon Sheri, Somnath
+            Nagar and nearby areas.
           </p>
 
           {/* 3 Clean Trust Indicators */}
-          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2.5 text-xs font-medium text-[#090A14] sm:text-sm">
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2.5 text-xs font-medium text-[#090A14] sm:text-[13.5px]">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-[#6B1CD4] shadow-2xs ring-1 ring-[#6B1CD4]/12">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[#6B1CD4] shadow-2xs ring-1 ring-[#6B1CD4]/14">
                 <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
               </span>
               <span>Verified Listings</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-[#6B1CD4] shadow-2xs ring-1 ring-[#6B1CD4]/12">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[#6B1CD4] shadow-2xs ring-1 ring-[#6B1CD4]/14">
                 <Zap className="h-4 w-4" aria-hidden="true" />
               </span>
               <span>Quick Response</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-[#6B1CD4] shadow-2xs ring-1 ring-[#6B1CD4]/12">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[#6B1CD4] shadow-2xs ring-1 ring-[#6B1CD4]/14">
                 <Users className="h-4 w-4" aria-hidden="true" />
               </span>
               <span>Local Experts</span>
             </div>
           </div>
 
-          {/* Prominent Public Property Submission CTA */}
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          {/* Primary Submission CTA Row */}
+          <div className="mt-6 flex flex-wrap items-center gap-3.5">
             <button
               type="button"
               data-testid="hero-add-property-btn"
               onClick={onOpenPostModal}
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-5 py-2.5 text-xs sm:text-sm font-bold tracking-wide text-white shadow-[0_12px_28px_-10px_rgba(107,28,212,0.55)] transition-all duration-150 hover:from-[#6B1CD4] hover:to-[#4E11A8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
+              className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-5.5 py-2.5 text-xs sm:text-[13px] font-bold tracking-wide text-white shadow-[0_12px_28px_-10px_rgba(107,28,212,0.52)] transition-all duration-150 hover:from-[#6B1CD4] hover:to-[#4E11A8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
             >
               <PlusCircle className="h-4 w-4" aria-hidden="true" />
               <span>ADD YOUR PROPERTY FREE</span>
@@ -172,15 +169,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
 
-        {/* Floating Search Bar Anchored Over Bottom Curved Wave */}
+        {/* Floating White Search Bar Aligned Exactly to Container Grid */}
         <form
           onSubmit={handleFormSubmit}
           aria-label="Search rental flats in Pune"
-          className="relative z-10 mt-6 rounded-2xl border border-[#090A14]/8 bg-white p-3 shadow-[0_22px_50px_-16px_rgba(95,24,200,0.18)] sm:mt-8 sm:p-3.5 lg:mt-10"
+          className="relative z-10 mt-8 rounded-2xl border border-[#090A14]/6 bg-white p-3 shadow-[0_20px_48px_-16px_rgba(78,24,168,0.16)] sm:mt-10 sm:p-3.5 lg:mt-12"
         >
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-12 lg:items-center lg:gap-0 lg:divide-x lg:divide-[#090A14]/10">
             {/* Location */}
-            <div className="lg:col-span-4 lg:px-3">
+            <div className="lg:col-span-4 lg:px-4">
               <label
                 htmlFor="hero-location"
                 className="block text-[11px] font-medium text-[#656275]"
@@ -192,9 +189,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <select
                   id="hero-location"
                   value={filters.location}
-                  onChange={(e) =>
-                    onFilterChange({ ...filters, location: e.target.value })
-                  }
+                  onChange={(e) => onFilterChange({ ...filters, location: e.target.value })}
                   className="h-8 w-full bg-transparent text-sm font-semibold text-[#090A14] focus:outline-none"
                 >
                   {locationOptions.map((opt) => (
@@ -208,10 +203,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
             {/* Property Type */}
             <div className="lg:col-span-3 lg:px-4">
-              <label
-                htmlFor="hero-type"
-                className="block text-[11px] font-medium text-[#656275]"
-              >
+              <label htmlFor="hero-type" className="block text-[11px] font-medium text-[#656275]">
                 Property Type
               </label>
               <div className="mt-0.5 flex items-center gap-2">
@@ -267,10 +259,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </div>
 
             {/* Search Action */}
-            <div className="sm:col-span-2 lg:col-span-2 lg:pl-3">
+            <div className="sm:col-span-2 lg:col-span-2 lg:pl-4">
               <button
                 type="submit"
-                className="inline-flex h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:from-[#6B1CD4] hover:to-[#4E11A8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-[#7C2AE8] to-[#5F18C8] px-5 text-sm font-semibold text-white shadow-xs transition-all duration-150 hover:from-[#6B1CD4] hover:to-[#4E11A8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
               >
                 <Search className="h-4 w-4" aria-hidden="true" />
                 <span>Search Flats</span>

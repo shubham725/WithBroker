@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, MapPin } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { LocalityConfig, PropertyListing } from '../types/property';
 import { getLocalityListingCount } from '../utils/propertyLogic';
 import { SafeImage } from './SafeImage';
@@ -18,15 +18,15 @@ export const ExploreAreasSection: React.FC<ExploreAreasSectionProps> = ({
   onSelectLocation,
 }) => {
   return (
-    <section id="areas" className="bg-[#F9F8FC] pt-4 pb-8 sm:pt-6 sm:pb-10">
+    <section id="areas" className="scroll-mt-24 bg-[#F8F8FA] pt-6 pb-8 sm:pt-8 sm:pb-10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl font-bold text-[#090A14] sm:text-2xl">
-              Explore Flats by <span className="text-[#6B1CD4]">Location</span>
+            <h2 className="font-display text-xl font-bold tracking-[-0.015em] text-[#090A14] sm:text-2xl">
+              Explore Flats by Neighborhood
             </h2>
-            <p className="mt-1 text-xs sm:text-sm text-[#656275]">
-              Discover approved rental properties automatically organized by Pune area.
+            <p className="mt-1 text-xs sm:text-sm text-[#5C5E6B]">
+              Browse verified rental properties across popular Pune localities.
             </p>
           </div>
 
@@ -35,18 +35,17 @@ export const ExploreAreasSection: React.FC<ExploreAreasSectionProps> = ({
             onClick={() => onSelectLocation('all')}
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#090A14] transition-colors hover:text-[#6B1CD4]"
           >
-            <span>View All Areas ({allProperties.length})</span>
+            <span className="tabular-nums">View All Areas ({allProperties.length})</span>
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {localities.map((loc) => {
             const availCount = getLocalityListingCount(allProperties, loc);
             const totalInArea = allProperties.filter(
               (p) =>
-                p.localitySlug === loc.slug ||
-                loc.matchSlugs.includes(p.localitySlug)
+                p.localitySlug === loc.slug || loc.matchSlugs.includes(p.localitySlug)
             ).length;
             const isSelected = selectedLocation === loc.slug;
             const displayName = loc.slug === 'other' ? 'Nearby Areas' : loc.name;
@@ -55,13 +54,13 @@ export const ExploreAreasSection: React.FC<ExploreAreasSectionProps> = ({
                 key={loc.id}
                 type="button"
                 onClick={() => onSelectLocation(loc.slug)}
-                className={`group flex items-center gap-3 rounded-2xl border bg-white p-2.5 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-[#6B1CD4]/40 hover:shadow-[0_14px_32px_-16px_rgba(95,24,200,0.18)] ${
+                className={`group flex items-center gap-3.5 rounded-xl border bg-white p-2.5 text-left transition-all duration-150 ${
                   isSelected
                     ? 'border-[#6B1CD4] ring-1 ring-[#6B1CD4]/25'
-                    : 'border-[#090A14]/8'
+                    : 'border-[#090A14]/9 hover:border-[#090A14]/25'
                 }`}
               >
-                <div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-[#F3F0FA]">
+                <div className="h-14 w-18 shrink-0 overflow-hidden rounded-lg bg-[#F3F3F7]">
                   <SafeImage
                     src={loc.image}
                     alt={`${displayName} apartments`}
@@ -69,22 +68,15 @@ export const ExploreAreasSection: React.FC<ExploreAreasSectionProps> = ({
                   />
                 </div>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 shrink-0 text-[#6B1CD4]" aria-hidden="true" />
-                    <span className="truncate font-display text-sm font-bold text-[#090A14]">
-                      {displayName}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs font-medium text-[#656275] tabular-nums">
+                <div className="min-w-0 flex-1 pr-1">
+                  <span className="block truncate font-display text-sm font-bold text-[#090A14] transition-colors group-hover:text-[#6B1CD4]">
+                    {displayName}
+                  </span>
+                  <p className="mt-0.5 text-xs font-medium text-[#5C5E6B] tabular-nums">
                     {availCount} Available
                     {totalInArea > availCount ? ` · ${totalInArea - availCount} Rented` : ''}
                   </p>
                 </div>
-
-                <span className="mr-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F5F1FD] text-[#6B1CD4] transition-colors group-hover:bg-[#6B1CD4] group-hover:text-white">
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
               </button>
             );
           })}

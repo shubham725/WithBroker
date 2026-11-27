@@ -6,16 +6,18 @@
     --wb-purple-dark: #5412AD;
     --wb-ink: #090A14;
     --wb-gold: #C89B45;
-    --wb-canvas: #F9F8FC;
+    --wb-canvas: #F8F8FA;
     --wb-surface: #FFFFFF;
-    --wb-muted: #656275;
+    --wb-muted: #5C5E6B;
   }
 
   html {
     scroll-behavior: smooth;
     font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: #090A14;
-    background-color: #F9F8FC;
+    background-color: #F8F8FA;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, .font-display {

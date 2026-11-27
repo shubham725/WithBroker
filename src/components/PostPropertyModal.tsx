@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
+  Building2,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -8,8 +9,8 @@ import {
   Loader2,
   Lock,
   Send,
-  Sparkles,
   Trash2,
+  Users,
   X,
 } from 'lucide-react';
 import { WHATSAPP_NUMBER_DISPLAY, WITHBROKER_LOGO_URL } from '../data/properties';
@@ -32,6 +33,7 @@ interface PostPropertyModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitted?: () => void;
+  onSwitchToRoommateForm?: () => void;
   ownerOnly?: boolean;
   standalone?: boolean;
 }
@@ -56,6 +58,9 @@ const FACILITY_CHOICES = [
   'Family Allowed',
   'Security / CCTV',
 ];
+
+const FIELD_CLASS =
+  'mt-1.5 h-11 w-full rounded-xl border border-transparent bg-[#F4F4F7] px-3.5 text-base text-[#090A14] placeholder:text-[#8A8C9B] transition-colors hover:bg-[#EEEEF3] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm';
 
 const INITIAL_FORM_STATE: PropertySubmissionInput = {
   name: '',
@@ -100,6 +105,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   isOpen,
   onClose,
   onSubmitted,
+  onSwitchToRoommateForm,
   ownerOnly = false,
   standalone = false,
 }) => {
@@ -152,7 +158,6 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
     desktopBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Lock background page scroll only in modal mode (standalone page uses natural window scroll)
   useEffect(() => {
     if (!isOpen || standalone || typeof document === 'undefined') return;
     const prevOverflow = document.body.style.overflow;
@@ -173,7 +178,6 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, standalone, onClose, submitting]);
 
-  // Clean up any remaining preview blob URLs ONLY on unmount (never mid-edit!)
   useEffect(() => {
     const urls = previewUrlsRef.current;
     return () => {
@@ -224,12 +228,10 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
         photoErr = 'Maximum 8 photos allowed per property.';
         break;
       }
-      // Mobile galleries occasionally emit empty MIME type or image/jpg
       if (file.type && !file.type.startsWith('image/')) {
         photoErr = 'Please select valid image photos (JPG, PNG, or WebP).';
         continue;
       }
-      // Photos are automatically compressed to <380KB before upload, so allow up to 15 MB raw camera photos
       if (file.size > 15 * 1024 * 1024) {
         photoErr = `"${file.name}" is larger than 15 MB. Please choose a smaller photo.`;
         continue;
@@ -362,7 +364,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
 
   const formHeader = standalone ? (
     <header className="sticky top-0 z-30 border-b border-[#090A14]/8 bg-white/95 backdrop-blur-xs">
-      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3">
+      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <img
             src={WITHBROKER_LOGO_URL}
@@ -370,15 +372,13 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
             className="h-8 w-auto shrink-0 object-contain sm:h-9"
           />
           <div className="hidden min-w-0 sm:block">
-            <p className="truncate text-xs font-semibold text-[#6B1CD4]">
-              Direct Owner Form · Free &amp; Fast · No Login Needed
-            </p>
             <h1
               id="post-property-modal-title"
-              className="truncate font-display text-lg font-bold text-[#090A14]"
+              className="truncate font-display text-base font-bold text-[#090A14]"
             >
-              Add Your Flat (Owners Only)
+              List Your Flat (Owners Only)
             </h1>
+            <p className="truncate text-xs text-[#5C5E6B]">Free listing · No login required</p>
           </div>
         </div>
 
@@ -386,32 +386,24 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
           type="button"
           disabled={submitting}
           onClick={onClose}
-          className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#090A14]/12 bg-white px-3 text-xs font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4] disabled:opacity-50"
+          className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-[#090A14]/14 bg-white px-3.5 text-xs font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4] disabled:opacity-50"
         >
           View Website
         </button>
       </div>
-      <div className="border-t border-[#090A14]/6 bg-[#FAF8FF] px-4 py-2 sm:hidden">
-        <p className="text-[11px] font-semibold text-[#6B1CD4]">
-          Direct Owner Form · Free &amp; Fast · No Login Needed
-        </p>
-        <p className="font-display text-sm font-bold text-[#090A14]">
-          Add Your Flat (Owners Only)
-        </p>
-      </div>
     </header>
   ) : (
-    <div className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-3 border-b border-[#090A14]/8 bg-white px-4 py-3.5 sm:static sm:px-6 sm:py-4">
+    <div className="sticky top-0 z-30 flex shrink-0 items-start justify-between gap-3 border-b border-[#090A14]/8 bg-white px-5 py-4 sm:static sm:px-6">
       <div className="min-w-0">
-        <p className="truncate text-[11px] font-semibold text-[#6B1CD4] sm:text-xs">
-          Fast Free Listing · Owners &amp; Brokers · No Login Needed
-        </p>
         <h2
           id="post-property-modal-title"
-          className="truncate font-display text-base font-bold text-[#090A14] sm:text-xl"
+          className="truncate font-display text-lg font-bold tracking-[-0.015em] text-[#090A14] sm:text-xl"
         >
-          Add Your Property Free
+          List Your Property Free
         </h2>
+        <p className="mt-0.5 text-xs text-[#5C5E6B]">
+          Owners &amp; brokers · No login required
+        </p>
       </div>
 
       <button
@@ -419,7 +411,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
         disabled={submitting}
         onClick={onClose}
         aria-label="Close post flat modal"
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#090A14]/12 text-[#090A14] transition-colors hover:bg-[#F9F8FC] disabled:opacity-50"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[#5C5E6B] transition-colors hover:bg-[#F4F4F7] hover:text-[#090A14] disabled:opacity-50"
       >
         <X className="h-5 w-5" />
       </button>
@@ -427,16 +419,16 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
   );
 
   const outerWrapperClass = standalone
-    ? 'min-h-screen w-full bg-[#F9F8FC] text-[#090A14]'
-    : 'fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-[#F9F8FC] sm:flex sm:items-center sm:justify-center sm:overflow-hidden sm:bg-[#090A14]/65 sm:p-5 sm:backdrop-blur-xs';
+    ? 'min-h-screen w-full bg-[#F8F8FA] text-[#090A14]'
+    : 'fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-white sm:flex sm:items-center sm:justify-center sm:overflow-hidden sm:bg-[#090A14]/55 sm:p-5 sm:backdrop-blur-xs';
 
   const cardWrapperClass = standalone
-    ? 'flex min-h-screen w-full flex-col bg-[#F9F8FC]'
-    : 'relative flex min-h-full w-full flex-col bg-[#F9F8FC] sm:min-h-0 sm:max-h-[92vh] sm:max-w-3xl sm:overflow-hidden sm:rounded-2xl sm:bg-white sm:shadow-2xl';
+    ? 'flex min-h-screen w-full flex-col bg-[#F8F8FA]'
+    : 'relative flex min-h-full w-full flex-col bg-white sm:min-h-0 sm:max-h-[92vh] sm:max-w-2xl sm:overflow-hidden sm:rounded-2xl sm:bg-white sm:shadow-2xl';
 
   const bodyWrapperClass = standalone
-    ? 'mx-auto w-full max-w-3xl flex-1 px-3.5 py-4 pb-8 sm:px-6 sm:py-6'
-    : 'flex-1 bg-[#F9F8FC] p-3.5 pb-6 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:p-6';
+    ? 'mx-auto w-full max-w-2xl flex-1 px-4 py-6 pb-10 sm:px-6'
+    : 'flex-1 bg-white px-5 py-5 pb-6 sm:min-h-0 sm:overflow-y-auto sm:overscroll-contain sm:px-6 sm:py-6';
 
   return (
     <div
@@ -457,13 +449,12 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
       >
         {formHeader}
 
-        {/* Scrollable Body (Native single-document scroll on mobile; bounded inner scroll on desktop) */}
         <div ref={desktopBodyRef} className={bodyWrapperClass}>
           {successInfo ? (
             <div
               data-testid="submission-confirmation"
               role="status"
-              className="rounded-2xl border border-[#16A34A]/25 bg-white p-5 sm:p-6 shadow-xs"
+              className="rounded-2xl border border-[#16A34A]/25 bg-white p-6"
             >
               <div className="flex items-start gap-3.5">
                 <CheckCircle2
@@ -477,21 +468,20 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     </h3>
                     <span
                       data-testid="submitted-property-code"
-                      className="rounded-lg bg-[#F5EFFD] px-2.5 py-1 text-xs font-bold text-[#6B1CD4] tabular-nums"
+                      className="rounded-lg bg-[#F4F4F7] px-2.5 py-1 text-xs font-semibold text-[#090A14] tabular-nums"
                     >
-                      Property ID: {successInfo.propertyCode}
-                    </span>
-                    <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 ring-1 ring-amber-600/20">
-                      Status: PENDING
+                      ID: {successInfo.propertyCode}
                     </span>
                   </div>
 
-                  <p className="mt-2.5 text-sm leading-relaxed text-[#524F61]">
-                    Thank you! Your property has been submitted successfully. Our WithBroker admin will review your listing. Once approved, it will be visible on our website.
+                  <p className="mt-2.5 text-sm leading-relaxed text-[#525563]">
+                    Thank you! Your property has been submitted. Our WithBroker team will review it
+                    shortly and publish it on the website.
                   </p>
                   {successInfo.photoCount > 0 && (
-                    <p className="mt-1.5 text-xs font-medium text-[#656275]">
-                      Saved {successInfo.photoCount} property photo{successInfo.photoCount === 1 ? '' : 's'} securely for admin review.
+                    <p className="mt-1.5 text-xs font-medium text-[#5C5E6B]">
+                      Saved {successInfo.photoCount} property{' '}
+                      {successInfo.photoCount === 1 ? 'photo' : 'photos'} for review.
                     </p>
                   )}
 
@@ -515,7 +505,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     <button
                       type="button"
                       onClick={onClose}
-                      className="h-11 rounded-xl px-4 text-sm font-semibold text-[#656275] hover:text-[#090A14]"
+                      className="h-11 rounded-xl px-4 text-sm font-semibold text-[#5C5E6B] hover:text-[#090A14]"
                     >
                       {standalone ? 'Explore WithBroker Website' : 'Close'}
                     </button>
@@ -528,7 +518,11 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
               id="post-property-form"
               onSubmit={handleSubmit}
               noValidate
-              className="space-y-4 pb-4"
+              className={
+                standalone
+                  ? 'space-y-6 rounded-2xl border border-[#090A14]/9 bg-white p-5 sm:p-7'
+                  : 'space-y-6 pb-2'
+              }
             >
               {serverError && (
                 <div
@@ -540,41 +534,73 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 </div>
               )}
 
-              {/* Section 1: Owner / Broker Details */}
-              <div className="rounded-2xl border border-[#090A14]/8 bg-white p-4 sm:p-5">
+              {/* Clean Segmented Listing Mode Switcher */}
+              {!ownerOnly && onSwitchToRoommateForm && (
+                <div
+                  role="tablist"
+                  aria-label="Choose what to post"
+                  className="grid grid-cols-2 gap-1 rounded-xl bg-[#EFEFF4] p-1"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={true}
+                    data-testid="switch-to-property-tab"
+                    className="flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-white px-3 text-xs font-semibold text-[#090A14] shadow-2xs"
+                  >
+                    <Building2 className="h-3.5 w-3.5 text-[#6B1CD4]" aria-hidden="true" />
+                    <span>Full Flat for Rent</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={false}
+                    data-testid="switch-to-roommate-tab"
+                    onClick={onSwitchToRoommateForm}
+                    className="flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-[#5C5E6B] transition-colors hover:text-[#090A14]"
+                  >
+                    <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>Roommate Needed</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Section: Your Contact Details */}
+              <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="font-display text-sm font-bold text-[#090A14]">
-                    {ownerOnly ? '1. Flat Owner Contact Details' : '1. Your Contact Details'}
+                    {ownerOnly ? 'Owner Contact Details' : 'Your Contact Details'}
                   </h3>
-                  <span className="inline-flex items-center gap-1 rounded-md bg-[#F5EFFD] px-2 py-0.5 text-[11px] font-semibold text-[#6B1CD4]">
-                    <Lock className="h-3 w-3" aria-hidden="true" />
-                    Admin Only
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#5C5E6B]">
+                    <Lock className="h-3 w-3 text-[#6B1CD4]" aria-hidden="true" />
+                    <span>Private · Admin Only</span>
                   </span>
                 </div>
-                <p className="mt-1 text-[11px] leading-relaxed text-[#656275] sm:text-xs">
-                  Your number is shown <strong className="text-[#090A14]">only in the Admin Panel</strong>. Public tenants always contact WithBroker ({WHATSAPP_NUMBER_DISPLAY}).
+                <p className="text-xs leading-relaxed text-[#5C5E6B]">
+                  Your number stays private for admin verification. Tenants always contact WithBroker
+                  ({WHATSAPP_NUMBER_DISPLAY}).
                 </p>
 
-                <div className="mt-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                   <div>
-                    <span className="block text-xs font-semibold text-[#090A14]">Listing By *</span>
+                    <span className="block text-xs font-medium text-[#5C5E6B]">Listing By *</span>
                     {ownerOnly ? (
-                      <div className="mt-1.5 flex h-11 items-center gap-2 rounded-xl border border-[#6B1CD4]/25 bg-[#F5EFFD]/70 px-3.5 text-xs font-bold text-[#6B1CD4]">
-                        <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <div className="mt-1.5 flex h-11 items-center gap-2 rounded-xl bg-[#F4F4F7] px-3.5 text-xs font-semibold text-[#090A14]">
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-[#6B1CD4]" aria-hidden="true" />
                         <span>Direct Property Owner</span>
                       </div>
                     ) : (
-                      <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] p-1">
+                      <div className="mt-1.5 grid grid-cols-2 gap-1 rounded-xl bg-[#EFEFF4] p-1">
                         {(['Owner', 'Broker'] as const).map((role) => (
                           <button
                             key={role}
                             type="button"
                             aria-pressed={form.submitterRole === role}
                             onClick={() => setForm({ ...form, submitterRole: role })}
-                            className={`h-9 rounded-lg text-xs font-semibold transition-colors ${
+                            className={`h-9 rounded-lg text-xs font-semibold transition-all ${
                               form.submitterRole === role
-                                ? 'bg-[#6B1CD4] text-white shadow-2xs'
-                                : 'text-[#656275] hover:text-[#090A14]'
+                                ? 'bg-white text-[#090A14] shadow-2xs'
+                                : 'text-[#5C5E6B] hover:text-[#090A14]'
                             }`}
                           >
                             {role}
@@ -585,7 +611,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </div>
 
                   <div>
-                    <label htmlFor="sub-name" className="block text-xs font-semibold text-[#090A14]">
+                    <label htmlFor="sub-name" className="block text-xs font-medium text-[#5C5E6B]">
                       Full Name *
                     </label>
                     <input
@@ -596,7 +622,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       placeholder="e.g. Amit Deshmukh"
                       aria-invalid={Boolean(errors.name)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                      className={FIELD_CLASS}
                     />
                     {errors.name && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -606,7 +632,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </div>
 
                   <div>
-                    <label htmlFor="sub-mobile" className="block text-xs font-semibold text-[#090A14]">
+                    <label htmlFor="sub-mobile" className="block text-xs font-medium text-[#5C5E6B]">
                       Mobile Number *
                     </label>
                     <input
@@ -618,7 +644,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => handleMobileChange(e.target.value)}
                       placeholder="10-digit mobile number"
                       aria-invalid={Boolean(errors.mobile)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                      className={`${FIELD_CLASS} tabular-nums`}
                     />
                     {errors.mobile && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -631,11 +657,11 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     <div className="flex items-center justify-between gap-2">
                       <label
                         htmlFor="sub-whatsapp"
-                        className="block text-xs font-semibold text-[#090A14]"
+                        className="block text-xs font-medium text-[#5C5E6B]"
                       >
                         WhatsApp Number *
                       </label>
-                      <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-[#6B1CD4]">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-[#6B1CD4]">
                         <input
                           type="checkbox"
                           checked={sameAsMobile}
@@ -654,7 +680,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
                       placeholder="10-digit WhatsApp number"
                       aria-invalid={Boolean(errors.whatsapp)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none disabled:opacity-65 sm:text-sm"
+                      className={`${FIELD_CLASS} tabular-nums disabled:opacity-60`}
                     />
                     {errors.whatsapp && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -665,22 +691,21 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 </div>
               </div>
 
-              {/* Section 2: Quick Flat Info + Google/Live GPS Location */}
-              <div className="rounded-2xl border border-[#090A14]/8 bg-white p-4 sm:p-5 space-y-4">
+              {/* Section: Flat Details & Location */}
+              <div className="space-y-4 border-t border-[#090A14]/8 pt-6">
                 <h3 className="font-display text-sm font-bold text-[#090A14]">
-                  2. Flat Details &amp; Google Location
+                  Flat Details &amp; Location
                 </h3>
 
-                {/* Fast Tap Chips for Type & Furnishing */}
                 <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                   <div>
-                    <span className="block text-xs font-semibold text-[#090A14]">
+                    <span className="block text-xs font-medium text-[#5C5E6B]">
                       Property Type *
                     </span>
                     <div
                       role="group"
                       aria-label="Property type"
-                      className="mt-1.5 grid grid-cols-4 gap-1.5"
+                      className="mt-1.5 grid grid-cols-4 gap-1 rounded-xl bg-[#EFEFF4] p-1"
                     >
                       {PROPERTY_TYPES.map((type) => {
                         const selected = form.propertyType === type;
@@ -690,10 +715,10 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             type="button"
                             aria-pressed={selected}
                             onClick={() => setForm({ ...form, propertyType: type })}
-                            className={`h-11 rounded-xl border text-xs font-bold transition-colors ${
+                            className={`h-9 rounded-lg text-xs font-semibold transition-all ${
                               selected
-                                ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white shadow-2xs'
-                                : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#6B1CD4]'
+                                ? 'bg-white text-[#090A14] shadow-2xs'
+                                : 'text-[#5C5E6B] hover:text-[#090A14]'
                             }`}
                           >
                             {type}
@@ -709,11 +734,11 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </div>
 
                   <div>
-                    <span className="block text-xs font-semibold text-[#090A14]">Furnishing *</span>
+                    <span className="block text-xs font-medium text-[#5C5E6B]">Furnishing *</span>
                     <div
                       role="group"
                       aria-label="Furnishing status"
-                      className="mt-1.5 grid grid-cols-3 gap-1.5"
+                      className="mt-1.5 grid grid-cols-3 gap-1 rounded-xl bg-[#EFEFF4] p-1"
                     >
                       {FURNISHING_TYPES.map((status) => {
                         const selected = form.furnishingStatus === status;
@@ -729,10 +754,10 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             type="button"
                             aria-pressed={selected}
                             onClick={() => setForm({ ...form, furnishingStatus: status })}
-                            className={`h-11 rounded-xl border px-1 text-xs font-semibold transition-colors ${
+                            className={`h-9 rounded-lg px-1 text-xs font-semibold transition-all ${
                               selected
-                                ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white shadow-2xs'
-                                : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#6B1CD4]'
+                                ? 'bg-white text-[#090A14] shadow-2xs'
+                                : 'text-[#5C5E6B] hover:text-[#090A14]'
                             }`}
                           >
                             {shortLabel}
@@ -743,7 +768,6 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </div>
                 </div>
 
-                {/* Live GPS + Google Maps Search + Interactive Pin + Manual Location */}
                 <LocationPickerField
                   location={form.location}
                   lat={form.lat}
@@ -765,12 +789,11 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   }
                 />
 
-                {/* Society / Building + Available From */}
                 <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                   <div>
                     <label
                       htmlFor="sub-society"
-                      className="block text-xs font-semibold text-[#090A14]"
+                      className="block text-xs font-medium text-[#5C5E6B]"
                     >
                       Society / Building Name
                     </label>
@@ -780,14 +803,14 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       value={form.societyName}
                       onChange={(e) => setForm({ ...form, societyName: e.target.value })}
                       placeholder="e.g. Arihant Niwara, Kamal Nagar"
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                      className={FIELD_CLASS}
                     />
                   </div>
 
                   <div>
                     <label
                       htmlFor="sub-available-from"
-                      className="block text-xs font-semibold text-[#090A14]"
+                      className="block text-xs font-medium text-[#5C5E6B]"
                     >
                       Available From *
                     </label>
@@ -797,7 +820,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       value={form.availableFrom}
                       onChange={(e) => setForm({ ...form, availableFrom: e.target.value })}
                       aria-invalid={Boolean(errors.availableFrom)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                      className={FIELD_CLASS}
                     />
                     {errors.availableFrom && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -808,9 +831,9 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 </div>
 
                 {/* Rent / Deposit / Brokerage */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
                   <div>
-                    <label htmlFor="sub-rent" className="block text-xs font-semibold text-[#090A14]">
+                    <label htmlFor="sub-rent" className="block text-xs font-medium text-[#5C5E6B]">
                       Monthly Rent (₹) *
                     </label>
                     <input
@@ -823,7 +846,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, monthlyRent: e.target.value })}
                       placeholder="e.g. 16000"
                       aria-invalid={Boolean(errors.monthlyRent)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                      className={`${FIELD_CLASS} tabular-nums`}
                     />
                     {errors.monthlyRent && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -835,7 +858,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   <div>
                     <label
                       htmlFor="sub-deposit"
-                      className="block text-xs font-semibold text-[#090A14]"
+                      className="block text-xs font-medium text-[#5C5E6B]"
                     >
                       Deposit (₹) *
                     </label>
@@ -849,7 +872,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, securityDeposit: e.target.value })}
                       placeholder="e.g. 35000"
                       aria-invalid={Boolean(errors.securityDeposit)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                      className={`${FIELD_CLASS} tabular-nums`}
                     />
                     {errors.securityDeposit && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -862,7 +885,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                     <div className="flex items-center justify-between gap-1">
                       <label
                         htmlFor="sub-brokerage"
-                        className="block text-xs font-semibold text-[#090A14]"
+                        className="block text-xs font-medium text-[#5C5E6B]"
                       >
                         Brokerage (₹)
                       </label>
@@ -884,7 +907,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                       onChange={(e) => setForm({ ...form, brokerageAmount: e.target.value })}
                       placeholder="0 for No Brokerage"
                       aria-invalid={Boolean(errors.brokerageAmount)}
-                      className="mt-1.5 h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3.5 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                      className={`${FIELD_CLASS} tabular-nums`}
                     />
                     {errors.brokerageAmount && (
                       <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -894,18 +917,18 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </div>
                 </div>
 
-                {/* Fast Multi-Photo Upload */}
+                {/* Multi-Photo Upload */}
                 <div>
-                  <label htmlFor="sub-photos" className="block text-xs font-semibold text-[#090A14]">
-                    Flat Photos (Up to 8 · Auto-optimized for fast upload)
+                  <label htmlFor="sub-photos" className="block text-xs font-medium text-[#5C5E6B]">
+                    Flat Photos (Up to 8)
                   </label>
-                  <div className="mt-1.5 rounded-xl border border-dashed border-[#6B1CD4]/35 bg-[#F9F8FC] p-3">
+                  <div className="mt-1.5 rounded-xl border border-dashed border-[#090A14]/18 bg-[#FAFAFC] p-3.5">
                     <div className="flex flex-wrap items-center justify-between gap-2.5">
                       <label
                         htmlFor="sub-photos"
-                        className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-white px-4 text-xs font-semibold text-[#6B1CD4] shadow-2xs ring-1 ring-[#6B1CD4]/25 transition-colors hover:bg-[#F5EFFD]"
+                        className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-[#090A14]/14 bg-white px-4 text-xs font-semibold text-[#090A14] transition-colors hover:border-[#6B1CD4] hover:text-[#6B1CD4]"
                       >
-                        <ImagePlus className="h-4 w-4" aria-hidden="true" />
+                        <ImagePlus className="h-4 w-4 text-[#6B1CD4]" aria-hidden="true" />
                         <span>Add Photos ({selectedPhotos.length}/8)</span>
                       </label>
                       <input
@@ -920,7 +943,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                         <button
                           type="button"
                           onClick={clearPhotos}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-[#656275] hover:text-red-600"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-[#5C5E6B] hover:text-red-600"
                         >
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                           <span>Clear all</span>
@@ -963,21 +986,18 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                 </div>
               </div>
 
-              {/* Section 3: Auto-Filled Optional Description + Collapsible Extra Specs */}
-              <div className="rounded-2xl border border-[#090A14]/8 bg-white p-4 sm:p-5 space-y-3.5">
+              {/* Section: Description & Optional Specs */}
+              <div className="space-y-3.5 border-t border-[#090A14]/8 pt-6">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4 text-[#6B1CD4]" aria-hidden="true" />
-                    <label
-                      htmlFor="sub-description"
-                      className="text-xs font-bold text-[#090A14]"
-                    >
-                      Property Description{' '}
-                      <span className="font-medium text-[#656275]">
-                        (Optional · Auto-filled from above)
-                      </span>
-                    </label>
-                  </div>
+                  <label
+                    htmlFor="sub-description"
+                    className="font-display text-sm font-bold text-[#090A14]"
+                  >
+                    Description{' '}
+                    <span className="font-sans text-xs font-normal text-[#5C5E6B]">
+                      (Auto-filled · Editable)
+                    </span>
+                  </label>
                   {descriptionEdited && (
                     <button
                       type="button"
@@ -985,7 +1005,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                         setDescriptionEdited(false);
                         setForm((prev) => ({ ...prev, description: '' }));
                       }}
-                      className="text-[11px] font-semibold text-[#6B1CD4] hover:underline"
+                      className="text-xs font-semibold text-[#6B1CD4] hover:underline"
                     >
                       Reset to Auto-Fill
                     </button>
@@ -1002,7 +1022,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   }}
                   placeholder="Automatically generated from your flat details above — edit only if you want to customize."
                   aria-invalid={Boolean(errors.description)}
-                  className="w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] p-3 text-base leading-relaxed text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                  className="w-full rounded-xl border border-transparent bg-[#F4F4F7] p-3.5 text-base leading-relaxed text-[#090A14] transition-colors hover:bg-[#EEEEF3] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
                 />
                 {errors.description && (
                   <p role="alert" className="text-xs font-medium text-red-600">
@@ -1010,16 +1030,15 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                   </p>
                 )}
 
-                {/* Collapsible More Specs Accordion (Keeps Mobile Super Fast!) */}
-                <div className="border-t border-[#090A14]/8 pt-3">
+                <div className="pt-1">
                   <button
                     type="button"
                     aria-expanded={showMoreSpecs}
                     onClick={() => setShowMoreSpecs((prev) => !prev)}
-                    className="flex w-full items-center justify-between rounded-xl bg-[#F9F8FC] px-3.5 py-2.5 text-left text-xs font-semibold text-[#090A14] transition-colors hover:bg-[#F5EFFD] hover:text-[#6B1CD4]"
+                    className="flex w-full items-center justify-between rounded-xl bg-[#F4F4F7] px-3.5 py-2.5 text-left text-xs font-semibold text-[#090A14] transition-colors hover:bg-[#ECECF2]"
                   >
                     <span>
-                      More Flat Specs &amp; Facilities (Optional: Bathrooms, Floor, Carpet Area)
+                      More Specs &amp; Facilities (Optional: Bathrooms, Floor, Carpet Area)
                     </span>
                     {showMoreSpecs ? (
                       <ChevronUp className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -1034,7 +1053,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                         <div>
                           <label
                             htmlFor="sub-bathrooms"
-                            className="block text-xs font-semibold text-[#090A14]"
+                            className="block text-xs font-medium text-[#5C5E6B]"
                           >
                             Bathrooms
                           </label>
@@ -1046,7 +1065,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             max={10}
                             value={form.bathrooms}
                             onChange={(e) => setForm({ ...form, bathrooms: e.target.value })}
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                            className={`${FIELD_CLASS} tabular-nums`}
                           />
                           {errors.bathrooms && (
                             <p role="alert" className="mt-1 text-xs font-medium text-red-600">
@@ -1058,7 +1077,7 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                         <div>
                           <label
                             htmlFor="sub-balconies"
-                            className="block text-xs font-semibold text-[#090A14]"
+                            className="block text-xs font-medium text-[#5C5E6B]"
                           >
                             Balconies
                           </label>
@@ -1070,14 +1089,14 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             max={10}
                             value={form.balconies}
                             onChange={(e) => setForm({ ...form, balconies: e.target.value })}
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] tabular-nums focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                            className={`${FIELD_CLASS} tabular-nums`}
                           />
                         </div>
 
                         <div>
                           <label
                             htmlFor="sub-floor"
-                            className="block text-xs font-semibold text-[#090A14]"
+                            className="block text-xs font-medium text-[#5C5E6B]"
                           >
                             Floor No.
                           </label>
@@ -1087,14 +1106,14 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             value={form.floorNumber}
                             onChange={(e) => setForm({ ...form, floorNumber: e.target.value })}
                             placeholder="e.g. 2"
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                            className={FIELD_CLASS}
                           />
                         </div>
 
                         <div>
                           <label
                             htmlFor="sub-total-floors"
-                            className="block text-xs font-semibold text-[#090A14]"
+                            className="block text-xs font-medium text-[#5C5E6B]"
                           >
                             Total Floors
                           </label>
@@ -1104,14 +1123,14 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             value={form.totalFloors}
                             onChange={(e) => setForm({ ...form, totalFloors: e.target.value })}
                             placeholder="e.g. 5"
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                            className={FIELD_CLASS}
                           />
                         </div>
 
                         <div className="col-span-2 sm:col-span-1">
                           <label
                             htmlFor="sub-carpet"
-                            className="block text-xs font-semibold text-[#090A14]"
+                            className="block text-xs font-medium text-[#5C5E6B]"
                           >
                             Carpet Area
                           </label>
@@ -1120,14 +1139,14 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                             type="text"
                             value={form.carpetArea}
                             onChange={(e) => setForm({ ...form, carpetArea: e.target.value })}
-                            placeholder="e.g. 620 Sq. Ft."
-                            className="mt-1.5 h-10 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] px-3 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+                            placeholder="e.g. 620 Sq.Ft."
+                            className={FIELD_CLASS}
                           />
                         </div>
                       </div>
 
                       <div>
-                        <span className="block text-xs font-semibold text-[#090A14]">
+                        <span className="block text-xs font-medium text-[#5C5E6B]">
                           Key Facilities
                         </span>
                         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1141,8 +1160,8 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
                                 aria-pressed={checked}
                                 className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
                                   checked
-                                    ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white'
-                                    : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#6B1CD4]'
+                                    ? 'border-[#090A14] bg-[#090A14] text-white'
+                                    : 'border-[#090A14]/12 bg-white text-[#4B4D5A] hover:border-[#090A14]/30'
                                 }`}
                               >
                                 {facility}
@@ -1159,26 +1178,27 @@ export const PostPropertyModal: React.FC<PostPropertyModalProps> = ({
           )}
         </div>
 
-        {/* Sticky Bottom Action Bar (Always anchored cleanly at bottom on mobile & desktop) */}
+        {/* Sticky Bottom Action Bar */}
         {!successInfo && (
           <div
             className={
               standalone
-                ? 'sticky bottom-0 z-30 shrink-0 border-t border-[#090A14]/8 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(9,10,20,0.06)]'
-                : 'sticky bottom-0 z-30 shrink-0 border-t border-[#090A14]/8 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgba(9,10,20,0.06)] sm:static sm:px-6 sm:py-4 sm:shadow-none'
+                ? 'sticky bottom-0 z-30 shrink-0 border-t border-[#090A14]/8 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]'
+                : 'sticky bottom-0 z-30 shrink-0 border-t border-[#090A14]/8 bg-white px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:px-6 sm:py-4'
             }
           >
-            <div className={standalone ? 'mx-auto w-full max-w-3xl sm:px-2' : ''}>
+            <div className={standalone ? 'mx-auto w-full max-w-2xl' : ''}>
               {errorCount > 0 && !submitting && (
                 <p className="mb-2 text-center text-xs font-semibold text-red-600">
-                  Please fill in {errorCount} highlighted {errorCount === 1 ? 'field' : 'fields'} above before submitting.
+                  Please fill in {errorCount} highlighted {errorCount === 1 ? 'field' : 'fields'}{' '}
+                  above before submitting.
                 </p>
               )}
               <button
                 type="submit"
                 form="post-property-form"
                 disabled={submitting}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6B1CD4] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#5412AD] disabled:opacity-65"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6B1CD4] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#5412AD] disabled:opacity-65"
               >
                 {submitting ? (
                   <>

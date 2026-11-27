@@ -56,7 +56,9 @@ import {
   formatINR,
   getOwnerSubmissionShareUrl,
 } from '../utils/propertyLogic';
+import { listAllAdminRoommatesAndReports } from '../lib/roommateRepo';
 import { AdminAiChatbot } from './AdminAiChatbot';
+import { AdminRoommatePanel } from './AdminRoommatePanel';
 import { SafeImage } from './SafeImage';
 import { WhatsAppIcon } from './WhatsAppButton';
 
@@ -114,6 +116,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const [adminSection, setAdminSection] = useState<'properties' | 'roommates'>('properties');
+  const [roommatePendingCount, setRoommatePendingCount] = useState(0);
+  const [roommateReportCount, setRoommateReportCount] = useState(0);
   const [activeTab, setActiveTab] = useState<AdminTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [notifOpen, setNotifOpen] = useState(false);
@@ -139,15 +144,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setErrorBanner(null);
     try {
       await ensureInitialCatalogSeededByAdmin();
-      const [propData, notifData] = await Promise.all([
+      const [propData, notifData, rmData] = await Promise.all([
         listAdminSubmissionsAndStats(),
         listAdminNotificationsFromFirestore(),
+        listAllAdminRoommatesAndReports().catch(() => null),
       ]);
 
       setProperties(propData.properties);
       setStats(propData.stats);
       setNotifications(notifData.notifications);
       setUnreadCount(notifData.unreadCount);
+      if (rmData) {
+        setRoommatePendingCount(rmData.stats.pending);
+        setRoommateReportCount(rmData.stats.openReports);
+      }
     } catch (err: unknown) {
       setErrorBanner((err as Error)?.message || 'Unable to load dashboard data.');
     } finally {
@@ -580,6 +590,80 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )}
 
+        {/* Admin Service Module Switcher: Rental Properties vs Roommate Management */}
+        <nav
+          aria-label="Admin sections"
+          className="mb-5 flex flex-wrap items-center gap-2 rounded-2xl border border-[#090A14]/10 bg-white p-2 shadow-2xs"
+        >
+          <button
+            type="button"
+            data-testid="admin-nav-properties"
+            onClick={() => setAdminSection('properties')}
+            className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs sm:text-sm font-bold transition-colors ${
+              adminSection === 'properties'
+                ? 'bg-[#6B1CD4] text-white shadow-xs'
+                : 'text-[#524F61] hover:bg-[#F5EFFD] hover:text-[#6B1CD4]'
+            }`}
+          >
+            <Building2 className="h-4 w-4" aria-hidden="true" />
+            <span>Rental Properties</span>
+            {stats.pending > 0 && (
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
+                  adminSection === 'properties'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {stats.pending} pending
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            data-testid="admin-nav-roommates"
+            onClick={() => setAdminSection('roommates')}
+            className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs sm:text-sm font-bold transition-colors ${
+              adminSection === 'roommates'
+                ? 'bg-[#6B1CD4] text-white shadow-xs'
+                : 'text-[#524F61] hover:bg-[#F5EFFD] hover:text-[#6B1CD4]'
+            }`}
+          >
+            <Users className="h-4 w-4" aria-hidden="true" />
+            <span>Roommate Management</span>
+            {roommatePendingCount > 0 && (
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
+                  adminSection === 'roommates'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {roommatePendingCount} pending
+              </span>
+            )}
+            {roommateReportCount > 0 && (
+              <span className="rounded-md bg-red-600 px-1.5 py-0.5 text-[11px] font-bold text-white tabular-nums">
+                {roommateReportCount} report{roommateReportCount === 1 ? '' : 's'}
+              </span>
+            )}
+          </button>
+        </nav>
+
+        {adminSection === 'roommates' ? (
+          <AdminRoommatePanel
+            onDataChanged={() => {
+              onDataChanged();
+              void fetchAdminData();
+            }}
+            onStatsUpdated={(pending, reports) => {
+              setRoommatePendingCount(pending);
+              setRoommateReportCount(reports);
+            }}
+          />
+        ) : (
+          <>
         {/* AI Property Chatbot Quick Launch Banner */}
         <section
           aria-label="AI Property Assistant"
@@ -947,6 +1031,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
           </div>
         </section>
+          </>
+        )}
       </main>
 
       {/* View Details Modal */}

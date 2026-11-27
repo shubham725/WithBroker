@@ -364,4 +364,53 @@ test('Admin AI Property Assistant draft sanitizer normalizes types, currency, ph
   assert.equal(computeMissingDraftFields(incomplete).length, 3);
 });
 
+test('parseAppRoute handles /property/:id deep links, known routes, and 404 paths gracefully; buildClientPageMetadata updates OG tags per property', async () => {
+  const { parseAppRoute, buildClientPageMetadata } = await import('./seoMetadata.ts');
+
+  const propRoute = parseAppRoute('/property/WB-385631', '', '');
+  assert.equal(propRoute.view, 'public');
+  assert.equal(propRoute.propertyId, 'WB-385631');
+  assert.equal(propRoute.isUnknownRoute, false);
+
+  const queryRoute = parseAppRoute('/', '?flat=WB-1001', '#flats');
+  assert.equal(queryRoute.view, 'public');
+  assert.equal(queryRoute.propertyId, 'WB-1001');
+  assert.equal(queryRoute.isUnknownRoute, false);
+
+  const adminRoute = parseAppRoute('/admin', '', '');
+  assert.equal(adminRoute.view, 'admin');
+  assert.equal(adminRoute.isUnknownRoute, false);
+
+  const ownerRoute = parseAppRoute('/owner-add-property', '', '');
+  assert.equal(ownerRoute.view, 'owner-form');
+  assert.equal(ownerRoute.isUnknownRoute, false);
+
+  const notFoundRoute = parseAppRoute('/some/missing-404-path', '', '');
+  assert.equal(notFoundRoute.view, 'public');
+  assert.equal(notFoundRoute.propertyId, null);
+  assert.equal(notFoundRoute.isUnknownRoute, true);
+
+  const flat = SAMPLE_PROPERTIES[0];
+  const propMeta = buildClientPageMetadata(flat, 'public', 'https://withbroker.vercel.app');
+  assert.ok(propMeta.ogTitle.includes(flat.title));
+  assert.ok(propMeta.ogDescription.includes('₹21,000/month'));
+  assert.equal(propMeta.ogImage, 'https://withbroker.vercel.app/assets/properties/flat-1/photo-2.jpeg');
+  assert.equal(propMeta.ogUrl, 'https://withbroker.vercel.app/property/WB-1001');
+
+  const uploadedMeta = buildClientPageMetadata(
+    { ...flat, propertyCode: 'WB-385631', images: ['fbphoto://photo-abc-123'] },
+    'public',
+    'https://withbroker.vercel.app'
+  );
+  assert.equal(
+    uploadedMeta.ogImage,
+    'https://withbroker.vercel.app/api/property-image/photo-abc-123'
+  );
+
+  const homeMeta = buildClientPageMetadata(null, 'public', 'https://withbroker.vercel.app');
+  assert.equal(homeMeta.ogUrl, 'https://withbroker.vercel.app/');
+  assert.equal(homeMeta.ogImage, 'https://withbroker.vercel.app/assets/properties/flat-1/photo-1.jpeg');
+});
+
+
 

@@ -182,16 +182,279 @@
         "updatedAt"
       ]
     },
+    "RoommateListing": {
+      "title": "RoommateListing",
+      "description": "Private master roommate listing record containing submitter contact PII and userId ownership. Readable/editable only by the listing owner (uid) or sole admin.",
+      "type": "object",
+      "properties": {
+        "listingCode": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 24,
+          "pattern": "^WB-RM-[0-9]{4,8}$"
+        },
+        "userId": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "listingType": { "type": "string", "enum": ["have_room", "need_room"] },
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "contactNumber": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[6-9][0-9]{9}$"
+        },
+        "whatsappNumber": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[6-9][0-9]{9}$"
+        },
+        "gender": { "type": "string", "enum": ["Male", "Female", "Prefer not to say"] },
+        "age": { "type": "number" },
+        "occupation": { "type": "string", "enum": ["Working Professional", "Student", "Other"] },
+        "roomType": {
+          "type": "string",
+          "enum": [
+            "1RK",
+            "1BHK",
+            "2BHK",
+            "3BHK",
+            "Independent Room",
+            "Shared Room",
+            "Hall / Living Room Space",
+            "1BHK Sharing",
+            "2BHK Sharing",
+            "3BHK Sharing",
+            "Other"
+          ]
+        },
+        "flatOccupancy": {
+          "type": "string",
+          "enum": ["Pre-Occupied Flat", "New Flat"]
+        },
+        "electricityBill": { "type": "string", "maxLength": 80 },
+        "facilities": { "type": "array" },
+        "urgent": { "type": "boolean" },
+        "shiftingNow": { "type": "boolean" },
+        "secondaryContact": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[6-9][0-9]{9}$"
+        },
+        "location": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "localitySlug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "buildingName": { "type": "string", "maxLength": 160 },
+        "showExactAddress": { "type": "boolean" },
+        "showPublicContact": { "type": "boolean" },
+        "rent": { "type": "number" },
+        "deposit": { "type": "number" },
+        "brokerage": { "type": "number" },
+        "furnishing": { "type": "string", "enum": ["Furnished", "Semi-Furnished", "Unfurnished"] },
+        "availableFrom": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "existingRoommates": { "type": "number" },
+        "peopleRequired": { "type": "number" },
+        "preferredGender": { "type": "string", "enum": ["Male", "Female", "Any"] },
+        "preferredOccupation": {
+          "type": "string",
+          "enum": ["Working Professional", "Student", "Any"]
+        },
+        "preferredAgeRange": { "type": "string", "maxLength": 40 },
+        "foodPreference": { "type": "string", "maxLength": 60 },
+        "smokingPreference": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "images": { "type": "array" },
+        "status": {
+          "type": "string",
+          "enum": ["Pending", "Active", "Rejected", "Fulfilled", "Unavailable"]
+        },
+        "rejectionReason": { "type": "string", "maxLength": 500 },
+        "reportCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "listingCode",
+        "userId",
+        "listingType",
+        "name",
+        "contactNumber",
+        "whatsappNumber",
+        "gender",
+        "occupation",
+        "roomType",
+        "location",
+        "localitySlug",
+        "showExactAddress",
+        "showPublicContact",
+        "rent",
+        "deposit",
+        "brokerage",
+        "furnishing",
+        "availableFrom",
+        "existingRoommates",
+        "peopleRequired",
+        "preferredGender",
+        "preferredOccupation",
+        "description",
+        "images",
+        "status",
+        "reportCount",
+        "createdAt",
+        "updatedAt",
+        "expiresAt"
+      ]
+    },
+    "PublicRoommateListing": {
+      "title": "PublicRoommateListing",
+      "description": "Approved active roommate listing visible publicly in Find a Roommate. Private phone numbers and exact building names are stripped unless explicitly opted in by the listing owner.",
+      "type": "object",
+      "properties": {
+        "listingCode": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 24,
+          "pattern": "^WB-RM-[0-9]{4,8}$"
+        },
+        "userId": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "listingType": { "type": "string", "enum": ["have_room", "need_room"] },
+        "posterFirstName": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "gender": { "type": "string", "enum": ["Male", "Female", "Prefer not to say"] },
+        "age": { "type": "number" },
+        "occupation": { "type": "string", "enum": ["Working Professional", "Student", "Other"] },
+        "roomType": {
+          "type": "string",
+          "enum": [
+            "1RK",
+            "1BHK",
+            "2BHK",
+            "3BHK",
+            "Independent Room",
+            "Shared Room",
+            "Hall / Living Room Space",
+            "1BHK Sharing",
+            "2BHK Sharing",
+            "3BHK Sharing",
+            "Other"
+          ]
+        },
+        "flatOccupancy": {
+          "type": "string",
+          "enum": ["Pre-Occupied Flat", "New Flat"]
+        },
+        "electricityBill": { "type": "string", "maxLength": 80 },
+        "facilities": { "type": "array" },
+        "urgent": { "type": "boolean" },
+        "shiftingNow": { "type": "boolean" },
+        "location": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "localitySlug": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80,
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "publicBuildingName": { "type": "string", "maxLength": 160 },
+        "showExactAddress": { "type": "boolean" },
+        "showPublicContact": { "type": "boolean" },
+        "publicWhatsappNumber": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[6-9][0-9]{9}$"
+        },
+        "publicSecondaryContact": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^[6-9][0-9]{9}$"
+        },
+        "rent": { "type": "number" },
+        "deposit": { "type": "number" },
+        "brokerage": { "type": "number" },
+        "furnishing": { "type": "string", "enum": ["Furnished", "Semi-Furnished", "Unfurnished"] },
+        "availableFrom": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "existingRoommates": { "type": "number" },
+        "peopleRequired": { "type": "number" },
+        "preferredGender": { "type": "string", "enum": ["Male", "Female", "Any"] },
+        "preferredOccupation": {
+          "type": "string",
+          "enum": ["Working Professional", "Student", "Any"]
+        },
+        "preferredAgeRange": { "type": "string", "maxLength": 40 },
+        "foodPreference": { "type": "string", "maxLength": 60 },
+        "smokingPreference": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "images": { "type": "array" },
+        "status": { "type": "string", "enum": ["Active"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "listingCode",
+        "userId",
+        "listingType",
+        "posterFirstName",
+        "gender",
+        "occupation",
+        "roomType",
+        "location",
+        "localitySlug",
+        "showExactAddress",
+        "showPublicContact",
+        "rent",
+        "deposit",
+        "brokerage",
+        "furnishing",
+        "availableFrom",
+        "existingRoommates",
+        "peopleRequired",
+        "preferredGender",
+        "preferredOccupation",
+        "description",
+        "images",
+        "status",
+        "createdAt",
+        "updatedAt",
+        "expiresAt"
+      ]
+    },
+    "RoommateReport": {
+      "title": "RoommateReport",
+      "description": "User safety report flagged against a roommate listing for sole admin moderation.",
+      "type": "object",
+      "properties": {
+        "listingCode": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 24,
+          "pattern": "^WB-RM-[0-9]{4,8}$"
+        },
+        "reason": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "details": { "type": "string", "maxLength": 600 },
+        "reporterUid": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["open", "reviewed", "dismissed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["listingCode", "reason", "status", "createdAt"]
+    },
     "PropertyPhoto": {
       "title": "PropertyPhoto",
-      "description": "Compressed rental flat photo stored in its own document (strictly under 450KB). Private while Pending/Rejected; publicly readable only when Admin marks isPublic=true.",
+      "description": "Compressed rental flat or roommate room photo stored in its own document (strictly under 450KB). Private while Pending/Rejected; publicly readable only when Admin marks isPublic=true.",
       "type": "object",
       "properties": {
         "propertyCode": {
           "type": "string",
           "minLength": 4,
           "maxLength": 24,
-          "pattern": "^WB-[0-9]{4,8}$"
+          "pattern": "^WB-(RM-)?[0-9]{4,8}$"
         },
         "filename": { "type": "string", "minLength": 1, "maxLength": 140 },
         "mimeType": {
@@ -200,24 +463,35 @@
         },
         "dataUrl": { "type": "string", "minLength": 30, "maxLength": 450000 },
         "isPublic": { "type": "boolean" },
+        "ownerUid": { "type": "string", "maxLength": 128 },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["propertyCode", "filename", "mimeType", "dataUrl", "isPublic", "createdAt"]
     },
     "AdminNotification": {
       "title": "AdminNotification",
-      "description": "Admin dashboard notification feed for new submissions and status changes.",
+      "description": "Admin dashboard notification feed for property & roommate submissions, reports, and status changes.",
       "type": "object",
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["submission", "approved", "rejected", "rented", "available", "deleted"]
+          "enum": [
+            "submission",
+            "approved",
+            "rejected",
+            "rented",
+            "available",
+            "deleted",
+            "roommate_submission",
+            "roommate_report",
+            "roommate_fulfilled"
+          ]
         },
         "propertyCode": {
           "type": "string",
           "minLength": 4,
           "maxLength": 24,
-          "pattern": "^WB-[0-9]{4,8}$"
+          "pattern": "^WB-(RM-)?[0-9]{4,8}$"
         },
         "title": { "type": "string", "minLength": 3, "maxLength": 140 },
         "message": { "type": "string", "minLength": 5, "maxLength": 400 },
@@ -246,13 +520,25 @@
       "schema": { "$ref": "#/entities/PropertySubmission" },
       "description": "All property submissions with private owner/broker contact info. Public create-only (Pending only); sole admin read/write."
     },
+    "/roommate_listings/{listingId}": {
+      "schema": { "$ref": "#/entities/RoommateListing" },
+      "description": "Master roommate listings with owner uid and contact PII. Strict owner-only or sole-admin read/write; zero self-approval."
+    },
+    "/public_roommates/{listingId}": {
+      "schema": { "$ref": "#/entities/PublicRoommateListing" },
+      "description": "Publicly readable approved active roommate listings (PII isolated unless explicitly opted in). Sole admin publishes; owner can edit active fields or remove."
+    },
+    "/roommate_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/RoommateReport" },
+      "description": "Safety reports submitted on roommate listings. Public create-only (open status); sole admin read/update/delete."
+    },
     "/property_photos/{photoId}": {
       "schema": { "$ref": "#/entities/PropertyPhoto" },
-      "description": "Compressed uploaded property images. Public create-only with isPublic=false; public get only when isPublic=true; sole admin full access."
+      "description": "Compressed uploaded property & roommate images. Public create-only with isPublic=false; public get only when isPublic=true; sole admin full access."
     },
     "/admin_notifications/{notificationId}": {
       "schema": { "$ref": "#/entities/AdminNotification" },
-      "description": "Notifications for sole admin. Public create-only for unread submission alerts; sole admin full read/update/delete."
+      "description": "Notifications for sole admin. Public create-only for unread submission/report alerts; sole admin full read/update/delete."
     },
     "/app_meta/{metaId}": {
       "schema": { "$ref": "#/entities/AppMetadata" },

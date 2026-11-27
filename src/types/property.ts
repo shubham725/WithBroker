@@ -87,7 +87,16 @@ export interface AdminDashboardStats {
 
 export interface AdminNotification {
   id: number;
-  type: 'submission' | 'approved' | 'rejected' | 'rented' | 'available' | 'deleted';
+  type:
+    | 'submission'
+    | 'approved'
+    | 'rejected'
+    | 'rented'
+    | 'available'
+    | 'deleted'
+    | 'roommate_submission'
+    | 'roommate_report'
+    | 'roommate_fulfilled';
   propertyId: number | null;
   propertyCode: string;
   title: string;

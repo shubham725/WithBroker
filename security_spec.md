@@ -1,23 +1,22 @@
-# WithBroker Firestore Security Specification (Phase 0)
+# WithBroker Security Specification (Properties + Roommate Connect)
 
-## 1. Core Data Invariants
-1. **Single Sole Admin**: Only `request.auth.token.email == 'yogeshbkumbhar0.2@gmail.com'` with `request.auth.token.email_verified == true` has admin privileges. No public signup, no client role claims, no secondary admins.
-2. **PII Split-Collection Isolation**: Owner/broker personal contact details (`submitterName`, `submitterMobile`, `submitterWhatsapp`, `rejectionReason`) exist **only** in `/property_submissions/{submissionId}`, which is strictly unreadable by public users or non-admin accounts. `/public_properties/{propertyId}` never stores PII.
-3. **Public Submission Forced Pending**: Anyone can create a `/property_submissions/{submissionId}` document without logging in, ONLY if `workflowStatus == 'Pending'`, `approvedAt == null`, `rejectionReason == null`, `submittedAt == request.time`, `updatedAt == request.time`, all required fields pass schema/regex/size checks, and no ghost fields exist.
-4. **Public Photos Isolation**: Public photo uploads in `/property_photos/{photoId}` must have `isPublic == false` and `dataUrl.size() <= 450000`. Public users can only `get` a photo when `resource.data.isPublic == true`. Only the sole admin can flip `isPublic` to `true` upon approval or delete photos.
-5. **Public Catalog Integrity**: Only the sole admin can write to `/public_properties/{propertyId}`. Public `get`/`list` queries on `/public_properties` only return documents where `resource.data.workflowStatus in ['Available', 'Rented']`.
-6. **Notifications Integrity**: Public users can only create `/admin_notifications/{id}` with `type == 'submission'`, `isRead == false`, `createdAt == request.time`. Only the sole admin can read, mark read, or delete notifications.
+## Data Invariants
+1. **Sole Admin Isolation**: Only verified Google account `yogeshbkumbhar0.2@gmail.com` (`email_verified == true`) can approve, reject, publish to `/public_properties` or `/public_roommates`, read private `/property_submissions`, read `/roommate_reports`, or manage photos globally.
+2. **Roommate Ownership Enforcement**: Every document in `/roommate_listings` is bound to an immutable `userId == request.auth.uid` (verified user). Non-owners receive `PERMISSION_DENIED` on `get`, `list`, `update`, and `delete`.
+3. **Zero Self-Approval**: Non-admin users creating a `/roommate_listings` record MUST set `status == 'Pending'`, `reportCount == 0`, `approvedAt == null`, `expiresAt > request.time`, and CANNOT create `/public_roommates` records or elevate `status` from `Pending`/`Rejected` to `Active`.
+4. **PII Split-Collection Isolation**: Private personal phone numbers (`contactNumber`, `whatsappNumber`) and exact building names remain isolated in `/roommate_listings`. `/public_roommates` only exposes `publicBuildingName` or `publicWhatsappNumber` when the owner explicitly opts in (`showExactAddress` / `showPublicContact`).
+5. **Action-Based Updates & Immutability**: `listingCode`, `userId`, and `createdAt` are immutable across all updates; every update path passes `isValidRoommateListing()` / `isValidPublicRoommate()` and strict `affectedKeys().hasOnly(...)` allowlists.
 
-## 2. "Dirty Dozen" Adversarial Attack Payloads (All Must Return PERMISSION_DENIED)
-1. **Self-Approval Attack**: Public user creates `/property_submissions/WB-9001` with `workflowStatus: "Available"`.
-2. **Direct Public Catalog Injection**: Public user creates `/public_properties/WB-9001` directly.
-3. **Ghost / Shadow Field Injection**: Public user submits `/property_submissions/WB-9002` with extra field `isAdminApproved: true`.
-4. **Email Spoofing Attack**: Authenticated user with `email: "yogeshbkumbhar0.2@gmail.com"` and `email_verified: false` tries to read `/property_submissions`.
-5. **Non-Admin PII Read**: Authenticated non-admin user (`other@gmail.com`) tries `get` or `list` on `/property_submissions`.
-6. **Unauthorized Status Tampering**: Public or non-admin user tries `update` on `/property_submissions/WB-1010` to set `workflowStatus: "Available"`.
-7. **Unauthorized Deletion**: Non-admin user tries `delete` on `/property_submissions/WB-1001` or `/public_properties/WB-1001`.
-8. **Pending Photo Leak**: Public user tries `get` on `/property_photos/photo-pending-1` where `isPublic == false`.
-9. **Public Photo Auto-Publish**: Public user creates `/property_photos/photo-hack-1` with `isPublic: true`.
-10. **ID Poisoning / Resource Exhaustion**: Public user creates `/property_submissions/<1500-char-junk-id>` or sends a 200-item `facilities` array.
-11. **Timestamp Spoofing**: Public user creates `/property_submissions/WB-9003` with backdated `submittedAt: "2020-01-01T00:00:00Z"` instead of `serverTimestamp()`.
-12. **Notification Spoofing / Scraping**: Public or non-admin user tries to `list` `/admin_notifications` or create a notification with `type: "approved"` or `isRead: true`.
+## Dirty Dozen Adversarial Payloads (Must Return PERMISSION_DENIED)
+1. **Self-Approval on Create**: User submits `/roommate_listings/WB-RM-9001` with `status: "Active"` -> DENIED.
+2. **Direct Public Publish Bypass**: Non-admin tries `create` on `/public_roommates/WB-RM-9001` -> DENIED.
+3. **Identity Spoofing**: User A creates `/roommate_listings/WB-RM-9002` with `userId: "user-B-uid"` -> DENIED.
+4. **Cross-Owner Read (PII Scrape)**: User B attempts `get` or `list` on User A's `/roommate_listings` doc -> DENIED.
+5. **Cross-Owner Edit**: User B attempts `update` on User A's `/roommate_listings` or `/public_roommates` -> DENIED.
+6. **Cross-Owner Delete**: User B attempts `delete` on User A's `/roommate_listings` -> DENIED.
+7. **Shadow Ghost Field Injection**: User A includes extra field `isVerified: true` on `/roommate_listings` create/update -> DENIED via `keys().hasOnly(...)`.
+8. **Unverified Admin Email Spoof**: Token with `email: "yogeshbkumbhar0.2@gmail.com"` and `email_verified: false` -> DENIED.
+9. **Pending-to-Active Self Escalation**: User A updates their `Pending` listing changing `status` to `"Active"` -> DENIED.
+10. **Timestamp Spoofing**: Client sends backdated `createdAt` or `updatedAt != request.time` -> DENIED.
+11. **Report Tampering**: Non-admin tries to `list` or `update` `/roommate_reports` -> DENIED.
+12. **Resource Exhaustion / Value Poisoning**: Payload with 50KB description or invalid `listingCode` -> DENIED via strict `.size()` and regex guards.

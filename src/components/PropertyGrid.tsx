@@ -3,12 +3,10 @@ import {
   ArrowUpDown,
   Bookmark,
   CheckCircle2,
-  IndianRupee,
   LayoutGrid,
   Map as MapIcon,
   RotateCcw,
-  Sofa,
-  Users,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import {
@@ -47,7 +45,7 @@ const PROPERTY_TYPE_TABS: Array<{ value: 'all' | PropertyType; label: string }> 
 ];
 
 const FURNISHING_OPTIONS: Array<{ value: 'all' | FurnishingStatus; label: string }> = [
-  { value: 'all', label: 'All Furnishing' },
+  { value: 'all', label: 'Any Furnishing' },
   { value: 'Fully Furnished', label: 'Fully Furnished' },
   { value: 'Semi-Furnished', label: 'Semi-Furnished' },
   { value: 'Unfurnished', label: 'Unfurnished' },
@@ -60,7 +58,7 @@ const SORT_OPTIONS: Array<{ value: SortOrder; label: string }> = [
 ];
 
 const MIN_RENT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: '', label: 'Min Rent' },
+  { value: '', label: 'Any Min Rent' },
   { value: '5000', label: 'Min ₹5,000' },
   { value: '10000', label: 'Min ₹10,000' },
   { value: '15000', label: 'Min ₹15,000' },
@@ -69,7 +67,7 @@ const MIN_RENT_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 const MAX_RENT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: '', label: 'Max Rent' },
+  { value: '', label: 'Any Max Rent' },
   { value: '10000', label: 'Max ₹10,000' },
   { value: '15000', label: 'Max ₹15,000' },
   { value: '22000', label: 'Max ₹22,000' },
@@ -96,6 +94,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
   onShare,
 }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [showFilters, setShowFilters] = useState(false);
 
   const furnishingValue = filters.furnishing ?? 'all';
   const submitterRoleValue = filters.submitterRole ?? 'all';
@@ -103,13 +102,17 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
   const onlySavedValue = Boolean(filters.onlySaved);
   const onlyAvailableValue = Boolean(filters.onlyAvailable);
 
+  const extraFilterCount = [
+    filters.minRent !== undefined && filters.minRent !== null,
+    filters.maxRent !== null,
+    furnishingValue !== 'all',
+    submitterRoleValue !== 'all',
+  ].filter(Boolean).length;
+
   const hasActiveFilter =
     filters.location !== 'all' ||
     filters.propertyType !== 'all' ||
-    (filters.minRent !== undefined && filters.minRent !== null) ||
-    filters.maxRent !== null ||
-    furnishingValue !== 'all' ||
-    submitterRoleValue !== 'all' ||
+    extraFilterCount > 0 ||
     onlyAvailableValue ||
     sortValue !== 'recent' ||
     onlySavedValue;
@@ -127,24 +130,23 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
   const rentedCount = properties.length - availableCount;
 
   return (
-    <section id="flats" className="bg-[#F9F8FC] pt-2 pb-10 sm:pb-12">
+    <section id="flats" className="scroll-mt-24 bg-[#F8F8FA] pt-2 pb-12 sm:pb-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        {/* Section Header Matching Reference Mockup */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        {/* Section Header + Clean Segmented BHK Filter */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="font-display text-2xl font-bold text-[#090A14] sm:text-[28px]">
-              Available <span className="text-[#6B1CD4]">Rental Flats</span>
+            <h2 className="font-display text-2xl font-bold tracking-[-0.02em] text-[#090A14] sm:text-[28px]">
+              Available Rental Flats
             </h2>
-            <p className="mt-1 text-xs sm:text-sm text-[#656275]">
-              Latest and verified rental properties in your preferred location.
+            <p className="mt-1 text-xs sm:text-sm text-[#5C5E6B]">
+              Verified apartments with upfront rent, deposit, and brokerage details.
             </p>
           </div>
 
-          {/* Right Quick BHK Filter Buttons */}
           <div
             role="group"
             aria-label="Filter by property type"
-            className="no-scrollbar flex flex-nowrap items-center gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible sm:pb-0"
+            className="no-scrollbar inline-flex flex-nowrap items-center gap-0.5 self-start overflow-x-auto rounded-xl bg-[#ECECF2] p-1 md:self-auto"
           >
             {PROPERTY_TYPE_TABS.map((tab) => {
               const isActive = filters.propertyType === tab.value;
@@ -158,10 +160,10 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                       propertyType: tab.value,
                     })
                   }
-                  className={`inline-flex min-h-[38px] shrink-0 items-center justify-center whitespace-nowrap rounded-full border px-4 py-1.5 text-xs sm:text-[13px] font-semibold transition-colors duration-150 ${
+                  className={`inline-flex min-h-[34px] shrink-0 items-center justify-center whitespace-nowrap rounded-lg px-3.5 text-xs sm:text-[13px] font-semibold transition-all duration-150 ${
                     isActive
-                      ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white shadow-xs'
-                      : 'border-[#090A14]/12 bg-white text-[#090A14] hover:border-[#6B1CD4] hover:text-[#6B1CD4]'
+                      ? 'bg-white text-[#090A14] shadow-2xs'
+                      : 'text-[#5C5E6B] hover:text-[#090A14]'
                   }`}
                 >
                   {tab.label}
@@ -171,260 +173,276 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
           </div>
         </div>
 
-        {/* Secondary Compact Utility Bar: Count, Furnishing, Sort, Saved & Cards/Map */}
-        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#090A14]/8 bg-white px-4 py-3 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[#656275]">
-            <span
-              data-testid="listings-count"
-              className="font-semibold text-[#090A14] tabular-nums"
-            >
-              {availableCount} {availableCount === 1 ? 'Flat' : 'Flats'} Available
-            </span>
-            {rentedCount > 0 && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="font-medium text-[#DC2626] tabular-nums">
-                  {rentedCount} Rented Out
-                </span>
-              </>
-            )}
-            {activeLocalityName && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="font-semibold text-[#6B1CD4]">{activeLocalityName}</span>
-                {viewMode !== 'map' && properties.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('map')}
-                    className="inline-flex items-center gap-1 rounded-lg bg-[#F5EFFD] px-2 py-0.5 text-[11px] font-semibold text-[#6B1CD4] transition-colors hover:bg-[#6B1CD4] hover:text-white"
-                  >
-                    <MapIcon className="h-3 w-3" aria-hidden="true" />
-                    <span>View on Map</span>
-                  </button>
+        {/* Clean Single-Line Marketplace Utility Bar */}
+        <div className="mt-5 rounded-2xl border border-[#090A14]/9 bg-white px-4 py-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {/* Left: Live Count & Active Area */}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#5C5E6B]">
+              <span
+                data-testid="listings-count"
+                className="font-semibold text-[#090A14] tabular-nums"
+              >
+                {availableCount} {availableCount === 1 ? 'Flat' : 'Flats'} Available
+              </span>
+              {rentedCount > 0 && (
+                <>
+                  <span aria-hidden="true" className="text-[#090A14]/20">
+                    ·
+                  </span>
+                  <span className="font-medium text-[#B91C1C] tabular-nums">
+                    {rentedCount} Rented Out
+                  </span>
+                </>
+              )}
+              {activeLocalityName && (
+                <>
+                  <span aria-hidden="true" className="text-[#090A14]/20">
+                    ·
+                  </span>
+                  <span className="font-semibold text-[#6B1CD4]">{activeLocalityName}</span>
+                </>
+              )}
+              {hasActiveFilter && (
+                <button
+                  type="button"
+                  onClick={onResetFilters}
+                  className="ml-1 inline-flex items-center gap-1 font-semibold text-[#6B1CD4] hover:underline"
+                >
+                  <RotateCcw className="h-3 w-3" aria-hidden="true" />
+                  <span>Reset</span>
+                </button>
+              )}
+            </div>
+
+            {/* Right: Focused Primary Controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                aria-expanded={showFilters}
+                onClick={() => setShowFilters((prev) => !prev)}
+                className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition-colors ${
+                  showFilters || extraFilterCount > 0
+                    ? 'border-[#6B1CD4] bg-[#F7F3FD] text-[#6B1CD4]'
+                    : 'border-[#090A14]/12 bg-white text-[#090A14] hover:border-[#090A14]/30'
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Filters</span>
+                {extraFilterCount > 0 && (
+                  <span className="tabular-nums">({extraFilterCount})</span>
                 )}
-              </>
-            )}
-            {hasActiveFilter && (
-              <button
-                type="button"
-                onClick={onResetFilters}
-                className="ml-1 inline-flex items-center gap-1 font-semibold text-[#6B1CD4] hover:underline"
-              >
-                <RotateCcw className="h-3 w-3" aria-hidden="true" />
-                <span>Reset Filters</span>
               </button>
-            )}
-          </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-            <div className="relative">
-              <label htmlFor="toolbar-min-rent" className="sr-only">
-                Minimum Rent
-              </label>
-              <IndianRupee
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B1CD4]"
-                aria-hidden="true"
-              />
-              <select
-                id="toolbar-min-rent"
-                value={filters.minRent ? String(filters.minRent) : ''}
-                onChange={(e) =>
-                  onFilterChange({
-                    ...filters,
-                    minRent: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-                className="h-9 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-8 pr-2 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-              >
-                {MIN_RENT_OPTIONS.map((opt) => (
-                  <option key={opt.label} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="relative">
+                <label htmlFor="toolbar-sort" className="sr-only">
+                  Sort Properties
+                </label>
+                <ArrowUpDown
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#5C5E6B]"
+                  aria-hidden="true"
+                />
+                <select
+                  id="toolbar-sort"
+                  value={sortValue}
+                  onChange={(e) =>
+                    onFilterChange({
+                      ...filters,
+                      sortBy: e.target.value as SortOrder,
+                    })
+                  }
+                  className="h-9 rounded-lg border border-[#090A14]/12 bg-white pl-8 pr-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:outline-none"
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="relative">
-              <label htmlFor="toolbar-max-rent" className="sr-only">
-                Maximum Rent
-              </label>
-              <IndianRupee
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#656275]"
-                aria-hidden="true"
-              />
-              <select
-                id="toolbar-max-rent"
-                value={filters.maxRent ? String(filters.maxRent) : ''}
-                onChange={(e) =>
-                  onFilterChange({
-                    ...filters,
-                    maxRent: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-                className="h-9 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-8 pr-2 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-              >
-                {MAX_RENT_OPTIONS.map((opt) => (
-                  <option key={opt.label} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative">
-              <label htmlFor="toolbar-furnishing" className="sr-only">
-                Furnishing Status
-              </label>
-              <Sofa
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B1CD4]"
-                aria-hidden="true"
-              />
-              <select
-                id="toolbar-furnishing"
-                value={furnishingValue}
-                onChange={(e) =>
-                  onFilterChange({
-                    ...filters,
-                    furnishing: e.target.value as 'all' | FurnishingStatus,
-                  })
-                }
-                className="h-9 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-8 pr-2.5 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-              >
-                {FURNISHING_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative">
-              <label htmlFor="toolbar-source" className="sr-only">
-                Owner or Broker Listing
-              </label>
-              <Users
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B1CD4]"
-                aria-hidden="true"
-              />
-              <select
-                id="toolbar-source"
-                value={submitterRoleValue}
-                onChange={(e) =>
-                  onFilterChange({
-                    ...filters,
-                    submitterRole: e.target.value as 'all' | SubmitterRole,
-                  })
-                }
-                className="h-9 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-8 pr-2.5 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-              >
-                {SOURCE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative">
-              <label htmlFor="toolbar-sort" className="sr-only">
-                Sort Properties
-              </label>
-              <ArrowUpDown
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#656275]"
-                aria-hidden="true"
-              />
-              <select
-                id="toolbar-sort"
-                value={sortValue}
-                onChange={(e) =>
-                  onFilterChange({
-                    ...filters,
-                    sortBy: e.target.value as SortOrder,
-                  })
-                }
-                className="h-9 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-8 pr-2.5 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
-              >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="button"
-              aria-pressed={onlyAvailableValue}
-              onClick={() =>
-                onFilterChange({
-                  ...filters,
-                  onlyAvailable: !onlyAvailableValue,
-                })
-              }
-              className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-xs font-semibold transition-colors duration-150 ${
-                onlyAvailableValue
-                  ? 'border-[#16A34A] bg-[#16A34A] text-white'
-                  : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#16A34A] hover:text-[#16A34A]'
-              }`}
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Available Only</span>
-            </button>
-
-            <button
-              type="button"
-              aria-pressed={onlySavedValue}
-              onClick={() =>
-                onFilterChange({
-                  ...filters,
-                  onlySaved: !onlySavedValue,
-                })
-              }
-              className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-xs font-semibold transition-colors duration-150 ${
-                onlySavedValue
-                  ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white'
-                  : 'border-[#090A14]/12 bg-[#F9F8FC] text-[#090A14] hover:border-[#6B1CD4] hover:text-[#6B1CD4]'
-              }`}
-            >
-              <Bookmark
-                className={`h-3.5 w-3.5 ${onlySavedValue ? 'fill-current' : ''}`}
-                aria-hidden="true"
-              />
-              <span>Saved</span>
-              <span className="tabular-nums opacity-80">({activeSavedCount})</span>
-            </button>
-
-            <div
-              role="group"
-              aria-label="Listings view mode"
-              className="inline-flex items-center rounded-xl bg-[#F5F3FA] p-0.5"
-            >
               <button
                 type="button"
-                onClick={() => setViewMode('grid')}
-                className={`inline-flex flex-1 sm:flex-initial items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                  viewMode === 'grid'
-                    ? 'bg-white text-[#090A14] shadow-2xs'
-                    : 'text-[#656275] hover:text-[#090A14]'
+                aria-pressed={onlyAvailableValue}
+                onClick={() =>
+                  onFilterChange({
+                    ...filters,
+                    onlyAvailable: !onlyAvailableValue,
+                  })
+                }
+                className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition-colors ${
+                  onlyAvailableValue
+                    ? 'border-[#16A34A] bg-[#16A34A] text-white'
+                    : 'border-[#090A14]/12 bg-white text-[#090A14] hover:border-[#090A14]/30'
                 }`}
               >
-                <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Cards</span>
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Available Only</span>
               </button>
+
               <button
                 type="button"
-                onClick={() => setViewMode('map')}
-                className={`inline-flex flex-1 sm:flex-initial items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                  viewMode === 'map'
-                    ? 'bg-white text-[#090A14] shadow-2xs'
-                    : 'text-[#656275] hover:text-[#090A14]'
+                aria-pressed={onlySavedValue}
+                onClick={() =>
+                  onFilterChange({
+                    ...filters,
+                    onlySaved: !onlySavedValue,
+                  })
+                }
+                className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition-colors ${
+                  onlySavedValue
+                    ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white'
+                    : 'border-[#090A14]/12 bg-white text-[#090A14] hover:border-[#090A14]/30'
                 }`}
               >
-                <MapIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Map</span>
+                <Bookmark
+                  className={`h-3.5 w-3.5 ${onlySavedValue ? 'fill-current' : ''}`}
+                  aria-hidden="true"
+                />
+                <span>Saved</span>
+                <span className="tabular-nums opacity-75">({activeSavedCount})</span>
               </button>
+
+              <div
+                role="group"
+                aria-label="Listings view mode"
+                className="inline-flex items-center rounded-lg bg-[#EFEFF4] p-0.5"
+              >
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                    viewMode === 'grid'
+                      ? 'bg-white text-[#090A14] shadow-2xs'
+                      : 'text-[#5C5E6B] hover:text-[#090A14]'
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Cards</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('map')}
+                  className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                    viewMode === 'map'
+                      ? 'bg-white text-[#090A14] shadow-2xs'
+                      : 'text-[#5C5E6B] hover:text-[#090A14]'
+                  }`}
+                >
+                  <MapIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Map</span>
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Expandable Secondary Filters Drawer */}
+          {showFilters && (
+            <div className="mt-3 grid grid-cols-1 gap-3 border-t border-[#090A14]/8 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label
+                  htmlFor="toolbar-min-rent"
+                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                >
+                  Minimum Rent
+                </label>
+                <select
+                  id="toolbar-min-rent"
+                  value={filters.minRent ? String(filters.minRent) : ''}
+                  onChange={(e) =>
+                    onFilterChange({
+                      ...filters,
+                      minRent: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-[#FAFAFC] px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                >
+                  {MIN_RENT_OPTIONS.map((opt) => (
+                    <option key={opt.label} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="toolbar-max-rent"
+                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                >
+                  Maximum Rent
+                </label>
+                <select
+                  id="toolbar-max-rent"
+                  value={filters.maxRent ? String(filters.maxRent) : ''}
+                  onChange={(e) =>
+                    onFilterChange({
+                      ...filters,
+                      maxRent: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-[#FAFAFC] px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                >
+                  {MAX_RENT_OPTIONS.map((opt) => (
+                    <option key={opt.label} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="toolbar-furnishing"
+                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                >
+                  Furnishing
+                </label>
+                <select
+                  id="toolbar-furnishing"
+                  value={furnishingValue}
+                  onChange={(e) =>
+                    onFilterChange({
+                      ...filters,
+                      furnishing: e.target.value as 'all' | FurnishingStatus,
+                    })
+                  }
+                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-[#FAFAFC] px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                >
+                  {FURNISHING_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="toolbar-source"
+                  className="block text-[11px] font-medium text-[#5C5E6B]"
+                >
+                  Posted By
+                </label>
+                <select
+                  id="toolbar-source"
+                  value={submitterRoleValue}
+                  onChange={(e) =>
+                    onFilterChange({
+                      ...filters,
+                      submitterRole: e.target.value as 'all' | SubmitterRole,
+                    })
+                  }
+                  className="mt-1 h-9 w-full rounded-lg border border-[#090A14]/12 bg-[#FAFAFC] px-3 text-xs font-semibold text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none"
+                >
+                  {SOURCE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Listings Content: Empty / Map / 3-Col Animated Cards */}
@@ -436,12 +454,12 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
               data-testid="empty-listings-state"
-              className="mt-6 rounded-2xl border border-[#090A14]/8 bg-white px-6 py-14 text-center shadow-2xs"
+              className="mt-6 rounded-2xl border border-[#090A14]/9 bg-white px-6 py-14 text-center"
             >
               <h3 className="font-display text-lg font-bold text-[#090A14]">
                 {onlySavedValue ? 'No saved flats yet' : 'No matching flats found'}
               </h3>
-              <p className="mx-auto mt-1.5 max-w-md text-sm text-[#656275]">
+              <p className="mx-auto mt-1.5 max-w-md text-sm text-[#5C5E6B]">
                 {onlySavedValue
                   ? 'Save any flat card to shortlist apartments for quick comparison.'
                   : 'Try selecting another Pune locality, relaxing furnishing filters, or increasing your monthly budget.'}
@@ -450,7 +468,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
                 <button
                   type="button"
                   onClick={onResetFilters}
-                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-[#6B1CD4] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#5412AD]"
+                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-[#090A14] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6B1CD4]"
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden="true" />
                   <span>Show All Flats</span>

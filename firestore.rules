@@ -23,11 +23,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     // Strictly ONE single sole admin account (verified Google email only)
     function isSoleAdmin() {
-      return isSignedIn()
-        && request.auth.token.email == 'yogeshbkumbhar0.2@gmail.com'
-        && request.auth.token.email_verified == true;
+      return isVerifiedUser()
+        && request.auth.token.email == 'yogeshbkumbhar0.2@gmail.com';
     }
 
     function isValidId(id) {
@@ -41,6 +44,12 @@ service cloud.firestore {
       return !(key in data)
         || data[key] == null
         || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function isOptNumber(data, key, minVal, maxVal) {
+      return !(key in data)
+        || data[key] == null
+        || (data[key] is number && data[key] >= minVal && data[key] <= maxVal);
     }
 
     function isValidStringList(val, maxLen) {
@@ -59,6 +68,68 @@ service cloud.firestore {
 
     function isValidSubmitterRole(val) {
       return val in ['Owner', 'Broker'];
+    }
+
+    function isValidRoommateType(val) {
+      return val in ['have_room', 'need_room'];
+    }
+
+    function isValidRoomType(val) {
+      return val in [
+        '1RK',
+        '1BHK',
+        '2BHK',
+        '3BHK',
+        'Independent Room',
+        'Shared Room',
+        'Hall / Living Room Space',
+        '1BHK Sharing',
+        '2BHK Sharing',
+        '3BHK Sharing',
+        'Other'
+      ];
+    }
+
+    function isOptBool(data, key) {
+      return !(key in data) || data[key] == null || data[key] is bool;
+    }
+
+    function isOptPhone(data, key) {
+      return !(key in data)
+        || data[key] == null
+        || (data[key] is string && data[key].size() == 10 && data[key].matches('^[6-9][0-9]{9}$'));
+    }
+
+    function isOptFlatOccupancy(data) {
+      return !('flatOccupancy' in data)
+        || data.flatOccupancy == null
+        || data.flatOccupancy in ['Pre-Occupied Flat', 'New Flat'];
+    }
+
+    function isOptStringList(data, key, maxLen) {
+      return !(key in data)
+        || data[key] == null
+        || isValidStringList(data[key], maxLen);
+    }
+
+    function isValidRoommateFurnishing(val) {
+      return val in ['Furnished', 'Semi-Furnished', 'Unfurnished'];
+    }
+
+    function isValidRoommateGender(val) {
+      return val in ['Male', 'Female', 'Prefer not to say'];
+    }
+
+    function isValidPreferredGender(val) {
+      return val in ['Male', 'Female', 'Any'];
+    }
+
+    function isValidOccupation(val) {
+      return val in ['Working Professional', 'Student', 'Other'];
+    }
+
+    function isValidPreferredOccupation(val) {
+      return val in ['Working Professional', 'Student', 'Any'];
     }
 
     // ---------------------------------------------------------
@@ -97,7 +168,7 @@ service cloud.firestore {
         && data.lat is number && data.lat >= -90 && data.lat <= 90
         && data.lng is number && data.lng >= -180 && data.lng <= 180
         && data.monthlyRent is number && data.monthlyRent >= 1000 && data.monthlyRent <= 500000
-        && (!('securityDeposit' in data) || data.securityDeposit == null || (data.securityDeposit is number && data.securityDeposit >= 0 && data.securityDeposit <= 5000000))
+        && isOptNumber(data, 'securityDeposit', 0, 5000000)
         && data.brokerageStatus is string && data.brokerageStatus.size() <= 40
         && data.brokerageAmount is number && data.brokerageAmount >= 0 && data.brokerageAmount <= 1000000
         && isOptString(data, 'maintenanceCharges', 120)
@@ -167,7 +238,7 @@ service cloud.firestore {
         && data.lat is number && data.lat >= -90 && data.lat <= 90
         && data.lng is number && data.lng >= -180 && data.lng <= 180
         && data.monthlyRent is number && data.monthlyRent >= 1000 && data.monthlyRent <= 500000
-        && (!('securityDeposit' in data) || data.securityDeposit == null || (data.securityDeposit is number && data.securityDeposit >= 0 && data.securityDeposit <= 5000000))
+        && isOptNumber(data, 'securityDeposit', 0, 5000000)
         && data.brokerageStatus is string && data.brokerageStatus.size() <= 40
         && data.brokerageAmount is number && data.brokerageAmount >= 0 && data.brokerageAmount <= 1000000
         && isOptString(data, 'maintenanceCharges', 120)
@@ -203,16 +274,165 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------
+    // Validation Blueprint: RoommateListing (Private Owner + Admin)
+    // ---------------------------------------------------------
+    function isValidRoommateListing(data) {
+      return data.keys().hasAll([
+          'listingCode', 'userId', 'listingType', 'name', 'contactNumber',
+          'whatsappNumber', 'gender', 'occupation', 'roomType', 'location',
+          'localitySlug', 'showExactAddress', 'showPublicContact', 'rent',
+          'deposit', 'brokerage', 'furnishing', 'availableFrom',
+          'existingRoommates', 'peopleRequired', 'preferredGender',
+          'preferredOccupation', 'description', 'images', 'status',
+          'reportCount', 'createdAt', 'updatedAt', 'expiresAt'
+        ])
+        && data.keys().hasOnly([
+          'listingCode', 'userId', 'listingType', 'name', 'contactNumber',
+          'whatsappNumber', 'secondaryContact', 'gender', 'age', 'occupation',
+          'roomType', 'flatOccupancy', 'electricityBill', 'facilities', 'urgent',
+          'shiftingNow', 'location', 'localitySlug', 'buildingName',
+          'showExactAddress', 'showPublicContact', 'rent', 'deposit', 'brokerage',
+          'furnishing', 'availableFrom', 'existingRoommates', 'peopleRequired',
+          'preferredGender', 'preferredOccupation', 'preferredAgeRange',
+          'foodPreference', 'smokingPreference', 'description', 'images', 'status',
+          'rejectionReason', 'reportCount', 'createdAt', 'approvedAt',
+          'updatedAt', 'expiresAt'
+        ])
+        && data.listingCode is string && data.listingCode.size() >= 6 && data.listingCode.size() <= 24 && data.listingCode.matches('^WB-RM-[0-9]{4,8}$')
+        && data.userId is string && data.userId.size() >= 4 && data.userId.size() <= 128
+        && isValidRoommateType(data.listingType)
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 100
+        && data.contactNumber is string && data.contactNumber.size() == 10 && data.contactNumber.matches('^[6-9][0-9]{9}$')
+        && data.whatsappNumber is string && data.whatsappNumber.size() == 10 && data.whatsappNumber.matches('^[6-9][0-9]{9}$')
+        && isOptPhone(data, 'secondaryContact')
+        && isValidRoommateGender(data.gender)
+        && isOptNumber(data, 'age', 18, 99)
+        && isValidOccupation(data.occupation)
+        && isValidRoomType(data.roomType)
+        && isOptFlatOccupancy(data)
+        && isOptString(data, 'electricityBill', 80)
+        && isOptStringList(data, 'facilities', 15)
+        && isOptBool(data, 'urgent')
+        && isOptBool(data, 'shiftingNow')
+        && data.location is string && data.location.size() >= 2 && data.location.size() <= 160
+        && data.localitySlug is string && data.localitySlug.size() >= 2 && data.localitySlug.size() <= 80 && data.localitySlug.matches('^[a-z0-9-]+$')
+        && isOptString(data, 'buildingName', 160)
+        && data.showExactAddress is bool
+        && data.showPublicContact is bool
+        && data.rent is number && data.rent >= 500 && data.rent <= 250000
+        && data.deposit is number && data.deposit >= 0 && data.deposit <= 2000000
+        && data.brokerage is number && data.brokerage >= 0 && data.brokerage <= 500000
+        && isValidRoommateFurnishing(data.furnishing)
+        && data.availableFrom is string && data.availableFrom.size() >= 4 && data.availableFrom.size() <= 40
+        && data.existingRoommates is number && data.existingRoommates >= 0 && data.existingRoommates <= 20
+        && data.peopleRequired is number && data.peopleRequired >= 1 && data.peopleRequired <= 10
+        && isValidPreferredGender(data.preferredGender)
+        && isValidPreferredOccupation(data.preferredOccupation)
+        && isOptString(data, 'preferredAgeRange', 40)
+        && isOptString(data, 'foodPreference', 60)
+        && isOptString(data, 'smokingPreference', 60)
+        && data.description is string && data.description.size() >= 10 && data.description.size() <= 2000
+        && isValidStringList(data.images, 8)
+        && data.status in ['Pending', 'Active', 'Rejected', 'Fulfilled', 'Unavailable']
+        && isOptString(data, 'rejectionReason', 500)
+        && data.reportCount is number && data.reportCount >= 0 && data.reportCount <= 1000
+        && data.createdAt is timestamp
+        && (!('approvedAt' in data) || data.approvedAt == null || data.approvedAt is timestamp)
+        && data.updatedAt is timestamp
+        && data.expiresAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
+    // Validation Blueprint: PublicRoommateListing (Sanitized Public)
+    // ---------------------------------------------------------
+    function isValidPublicRoommate(data) {
+      return data.keys().hasAll([
+          'listingCode', 'userId', 'listingType', 'posterFirstName', 'gender',
+          'occupation', 'roomType', 'location', 'localitySlug',
+          'showExactAddress', 'showPublicContact', 'rent', 'deposit', 'brokerage',
+          'furnishing', 'availableFrom', 'existingRoommates', 'peopleRequired',
+          'preferredGender', 'preferredOccupation', 'description', 'images',
+          'status', 'createdAt', 'updatedAt', 'expiresAt'
+        ])
+        && data.keys().hasOnly([
+          'listingCode', 'userId', 'listingType', 'posterFirstName', 'gender',
+          'age', 'occupation', 'roomType', 'flatOccupancy', 'electricityBill',
+          'facilities', 'urgent', 'shiftingNow', 'location', 'localitySlug',
+          'publicBuildingName', 'showExactAddress', 'showPublicContact',
+          'publicWhatsappNumber', 'publicSecondaryContact', 'rent', 'deposit',
+          'brokerage', 'furnishing', 'availableFrom', 'existingRoommates',
+          'peopleRequired', 'preferredGender', 'preferredOccupation',
+          'preferredAgeRange', 'foodPreference', 'smokingPreference',
+          'description', 'images', 'status', 'createdAt', 'approvedAt',
+          'updatedAt', 'expiresAt'
+        ])
+        && data.listingCode is string && data.listingCode.size() >= 6 && data.listingCode.size() <= 24 && data.listingCode.matches('^WB-RM-[0-9]{4,8}$')
+        && data.userId is string && data.userId.size() >= 4 && data.userId.size() <= 128
+        && isValidRoommateType(data.listingType)
+        && data.posterFirstName is string && data.posterFirstName.size() >= 1 && data.posterFirstName.size() <= 60
+        && isValidRoommateGender(data.gender)
+        && isOptNumber(data, 'age', 18, 99)
+        && isValidOccupation(data.occupation)
+        && isValidRoomType(data.roomType)
+        && isOptFlatOccupancy(data)
+        && isOptString(data, 'electricityBill', 80)
+        && isOptStringList(data, 'facilities', 15)
+        && isOptBool(data, 'urgent')
+        && isOptBool(data, 'shiftingNow')
+        && data.location is string && data.location.size() >= 2 && data.location.size() <= 160
+        && data.localitySlug is string && data.localitySlug.size() >= 2 && data.localitySlug.size() <= 80 && data.localitySlug.matches('^[a-z0-9-]+$')
+        && isOptString(data, 'publicBuildingName', 160)
+        && data.showExactAddress is bool
+        && data.showPublicContact is bool
+        && isOptPhone(data, 'publicWhatsappNumber')
+        && isOptPhone(data, 'publicSecondaryContact')
+        && data.rent is number && data.rent >= 500 && data.rent <= 250000
+        && data.deposit is number && data.deposit >= 0 && data.deposit <= 2000000
+        && data.brokerage is number && data.brokerage >= 0 && data.brokerage <= 500000
+        && isValidRoommateFurnishing(data.furnishing)
+        && data.availableFrom is string && data.availableFrom.size() >= 4 && data.availableFrom.size() <= 40
+        && data.existingRoommates is number && data.existingRoommates >= 0 && data.existingRoommates <= 20
+        && data.peopleRequired is number && data.peopleRequired >= 1 && data.peopleRequired <= 10
+        && isValidPreferredGender(data.preferredGender)
+        && isValidPreferredOccupation(data.preferredOccupation)
+        && isOptString(data, 'preferredAgeRange', 40)
+        && isOptString(data, 'foodPreference', 60)
+        && isOptString(data, 'smokingPreference', 60)
+        && data.description is string && data.description.size() >= 10 && data.description.size() <= 2000
+        && isValidStringList(data.images, 8)
+        && data.status == 'Active'
+        && data.createdAt is timestamp
+        && (!('approvedAt' in data) || data.approvedAt == null || data.approvedAt is timestamp)
+        && data.updatedAt is timestamp
+        && data.expiresAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
+    // Validation Blueprint: RoommateReport
+    // ---------------------------------------------------------
+    function isValidRoommateReport(data) {
+      return data.keys().hasAll(['listingCode', 'reason', 'status', 'createdAt'])
+        && data.keys().hasOnly(['listingCode', 'reason', 'details', 'reporterUid', 'status', 'createdAt'])
+        && data.listingCode is string && data.listingCode.size() >= 6 && data.listingCode.size() <= 24 && data.listingCode.matches('^WB-RM-[0-9]{4,8}$')
+        && data.reason is string && data.reason.size() >= 3 && data.reason.size() <= 120
+        && isOptString(data, 'details', 600)
+        && isOptString(data, 'reporterUid', 128)
+        && data.status in ['open', 'reviewed', 'dismissed']
+        && data.createdAt is timestamp;
+    }
+
+    // ---------------------------------------------------------
     // Validation Blueprint: PropertyPhoto
     // ---------------------------------------------------------
     function isValidPhoto(data) {
       return data.keys().hasAll(['propertyCode', 'filename', 'mimeType', 'dataUrl', 'isPublic', 'createdAt'])
-        && data.keys().hasOnly(['propertyCode', 'filename', 'mimeType', 'dataUrl', 'isPublic', 'createdAt'])
-        && data.propertyCode is string && data.propertyCode.size() >= 4 && data.propertyCode.size() <= 24 && data.propertyCode.matches('^WB-[0-9]{4,8}$')
+        && data.keys().hasOnly(['propertyCode', 'filename', 'mimeType', 'dataUrl', 'isPublic', 'ownerUid', 'createdAt'])
+        && data.propertyCode is string && data.propertyCode.size() >= 4 && data.propertyCode.size() <= 24 && data.propertyCode.matches('^WB-(RM-)?[0-9]{4,8}$')
         && data.filename is string && data.filename.size() >= 1 && data.filename.size() <= 140
         && data.mimeType in ['image/jpeg', 'image/png', 'image/webp']
         && data.dataUrl is string && data.dataUrl.size() >= 30 && data.dataUrl.size() <= 450000
         && data.isPublic is bool
+        && isOptString(data, 'ownerUid', 128)
         && data.createdAt is timestamp;
     }
 
@@ -222,8 +442,11 @@ service cloud.firestore {
     function isValidNotification(data) {
       return data.keys().hasAll(['type', 'propertyCode', 'title', 'message', 'isRead', 'createdAt'])
         && data.keys().hasOnly(['type', 'propertyCode', 'title', 'message', 'isRead', 'createdAt'])
-        && data.type in ['submission', 'approved', 'rejected', 'rented', 'available', 'deleted']
-        && data.propertyCode is string && data.propertyCode.size() >= 4 && data.propertyCode.size() <= 24 && data.propertyCode.matches('^WB-[0-9]{4,8}$')
+        && data.type in [
+          'submission', 'approved', 'rejected', 'rented', 'available', 'deleted',
+          'roommate_submission', 'roommate_report', 'roommate_fulfilled'
+        ]
+        && data.propertyCode is string && data.propertyCode.size() >= 4 && data.propertyCode.size() <= 24 && data.propertyCode.matches('^WB-(RM-)?[0-9]{4,8}$')
         && data.title is string && data.title.size() >= 3 && data.title.size() <= 140
         && data.message is string && data.message.size() >= 5 && data.message.size() <= 400
         && data.isRead is bool
@@ -290,28 +513,201 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------
+    // Collection: /roommate_listings/{listingId}
+    // Private master roommate records: Owner (uid) or Sole Admin read/write; zero self-approval
+    // ---------------------------------------------------------
+    match /roommate_listings/{listingId} {
+      allow get: if isValidId(listingId)
+        && (
+          isSoleAdmin()
+          || (isVerifiedUser() && existing().userId != 'guest' && existing().userId == request.auth.uid)
+        );
+      allow list: if isSoleAdmin()
+        || (isVerifiedUser() && existing().userId != 'guest' && existing().userId == request.auth.uid);
+      allow create: if isValidId(listingId)
+        && isValidRoommateListing(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && incoming().expiresAt > request.time
+        && (
+          isSoleAdmin()
+          || (
+            incoming().status == 'Pending'
+            && incoming().reportCount == 0
+            && (!('approvedAt' in incoming()) || incoming().approvedAt == null)
+            && (!('rejectionReason' in incoming()) || incoming().rejectionReason == null)
+            && (
+              incoming().userId == 'guest'
+              || (isVerifiedUser() && incoming().userId == request.auth.uid)
+            )
+          )
+        );
+      allow update: if isValidId(listingId)
+        && isValidRoommateListing(incoming())
+        && incoming().listingCode == existing().listingCode
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isSoleAdmin()
+          || (
+            isVerifiedUser()
+            && existing().userId != 'guest'
+            && existing().userId == request.auth.uid
+            && incoming().reportCount == existing().reportCount
+            && (
+              // Action 1: Owner edits own non-terminal listing details (cannot self-approve to Active)
+              (
+                existing().status in ['Pending', 'Active', 'Rejected']
+                && incoming().diff(existing()).affectedKeys().hasOnly([
+                  'listingType', 'name', 'contactNumber', 'whatsappNumber', 'secondaryContact',
+                  'gender', 'age', 'occupation', 'roomType', 'flatOccupancy',
+                  'electricityBill', 'facilities', 'urgent', 'shiftingNow',
+                  'location', 'localitySlug', 'buildingName', 'showExactAddress',
+                  'showPublicContact', 'rent', 'deposit', 'brokerage', 'furnishing',
+                  'availableFrom', 'existingRoommates', 'peopleRequired',
+                  'preferredGender', 'preferredOccupation', 'preferredAgeRange',
+                  'foodPreference', 'smokingPreference', 'description', 'images',
+                  'status', 'rejectionReason', 'updatedAt'
+                ])
+                && (
+                  incoming().status == existing().status
+                  || (existing().status == 'Rejected' && incoming().status == 'Pending')
+                )
+              )
+              // Action 2: Owner marks Active listing as Fulfilled or Unavailable
+              || (
+                existing().status == 'Active'
+                && incoming().status in ['Fulfilled', 'Unavailable']
+                && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+              )
+              // Action 3: Owner renews expiry date on Active/Fulfilled/Unavailable listing
+              || (
+                existing().status in ['Active', 'Fulfilled', 'Unavailable']
+                && incoming().expiresAt > request.time
+                && (
+                  (existing().status == 'Active' && incoming().status == 'Active')
+                  || (existing().status in ['Fulfilled', 'Unavailable'] && incoming().status == 'Pending')
+                )
+                && incoming().diff(existing()).affectedKeys().hasOnly(['expiresAt', 'status', 'updatedAt'])
+              )
+            )
+          )
+        );
+      allow delete: if isValidId(listingId)
+        && (
+          isSoleAdmin()
+          || (isVerifiedUser() && existing().userId != 'guest' && existing().userId == request.auth.uid)
+        );
+    }
+
+    // ---------------------------------------------------------
+    // Collection: /public_roommates/{listingId}
+    // Public active roommate catalog (PII stripped unless consented)
+    // ---------------------------------------------------------
+    match /public_roommates/{listingId} {
+      allow get: if isValidId(listingId)
+        && (existing().status == 'Active' || isSoleAdmin());
+      allow list: if existing().status == 'Active' || isSoleAdmin();
+      allow create: if isSoleAdmin()
+        && isValidId(listingId)
+        && isValidPublicRoommate(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(listingId)
+        && isValidPublicRoommate(incoming())
+        && incoming().listingCode == existing().listingCode
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isSoleAdmin()
+          || (
+            isVerifiedUser()
+            && existing().userId != 'guest'
+            && existing().userId == request.auth.uid
+            && existing().status == 'Active'
+            && incoming().status == 'Active'
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'listingType', 'posterFirstName', 'gender', 'age', 'occupation',
+              'roomType', 'flatOccupancy', 'electricityBill', 'facilities',
+              'urgent', 'shiftingNow', 'location', 'localitySlug',
+              'publicBuildingName', 'showExactAddress', 'showPublicContact',
+              'publicWhatsappNumber', 'publicSecondaryContact', 'rent',
+              'deposit', 'brokerage', 'furnishing', 'availableFrom',
+              'existingRoommates', 'peopleRequired', 'preferredGender',
+              'preferredOccupation', 'preferredAgeRange', 'foodPreference',
+              'smokingPreference', 'description', 'images', 'expiresAt', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(listingId)
+        && (
+          isSoleAdmin()
+          || (isVerifiedUser() && existing().userId != 'guest' && existing().userId == request.auth.uid)
+        );
+    }
+
+    // ---------------------------------------------------------
+    // Collection: /roommate_reports/{reportId}
+    // Public create-only safety reports; Sole Admin moderation
+    // ---------------------------------------------------------
+    match /roommate_reports/{reportId} {
+      allow get: if isSoleAdmin() && isValidId(reportId);
+      allow list: if isSoleAdmin();
+      allow create: if isValidId(reportId)
+        && isValidRoommateReport(incoming())
+        && incoming().status == 'open'
+        && incoming().createdAt == request.time;
+      allow update: if isSoleAdmin()
+        && isValidId(reportId)
+        && isValidRoommateReport(incoming())
+        && incoming().listingCode == existing().listingCode
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+      allow delete: if isSoleAdmin() && isValidId(reportId);
+    }
+
+    // ---------------------------------------------------------
     // Collection: /property_photos/{photoId}
-    // Public create-only (isPublic == false); public get ONLY if isPublic == true; Sole Admin full control
+    // Public create-only (isPublic == false); public get ONLY if isPublic == true or owner/admin
     // ---------------------------------------------------------
     match /property_photos/{photoId} {
       allow get: if isValidId(photoId)
-        && (existing().isPublic == true || isSoleAdmin());
+        && (
+          existing().isPublic == true
+          || isSoleAdmin()
+          || (isVerifiedUser() && 'ownerUid' in existing() && existing().ownerUid == request.auth.uid)
+        );
       allow list: if isSoleAdmin();
       allow create: if isValidId(photoId)
         && isValidPhoto(incoming())
         && incoming().createdAt == request.time
-        && (isSoleAdmin() || incoming().isPublic == false);
+        && (
+          isSoleAdmin()
+          || (
+            incoming().isPublic == false
+            && (
+              !('ownerUid' in incoming())
+              || incoming().ownerUid == null
+              || (isVerifiedUser() && incoming().ownerUid == request.auth.uid)
+            )
+          )
+        );
       allow update: if isSoleAdmin()
         && isValidId(photoId)
         && isValidPhoto(incoming())
         && incoming().createdAt == existing().createdAt
         && incoming().diff(existing()).affectedKeys().hasOnly(['isPublic']);
-      allow delete: if isSoleAdmin() && isValidId(photoId);
+      allow delete: if isValidId(photoId)
+        && (
+          isSoleAdmin()
+          || (isVerifiedUser() && 'ownerUid' in existing() && existing().ownerUid == request.auth.uid)
+        );
     }
 
     // ---------------------------------------------------------
     // Collection: /admin_notifications/{notificationId}
-    // Public create-only for unread submission alerts; Sole Admin read/update/delete
+    // Public create-only for unread submission/report alerts; Sole Admin read/update/delete
     // ---------------------------------------------------------
     match /admin_notifications/{notificationId} {
       allow get: if isSoleAdmin() && isValidId(notificationId);
@@ -321,7 +717,10 @@ service cloud.firestore {
         && incoming().createdAt == request.time
         && (
           isSoleAdmin()
-          || (incoming().type == 'submission' && incoming().isRead == false)
+          || (
+            incoming().type in ['submission', 'roommate_submission', 'roommate_report']
+            && incoming().isRead == false
+          )
         );
       allow update: if isSoleAdmin()
         && isValidId(notificationId)

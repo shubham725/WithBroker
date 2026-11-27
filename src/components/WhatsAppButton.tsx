@@ -24,11 +24,9 @@ export const FloatingWhatsAppButton: React.FC = () => {
       rel="noopener noreferrer"
       aria-label="Chat with WithBroker on WhatsApp (+91 9834626078)"
       title="Chat on WhatsApp"
-      className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#090A14] text-white shadow-lg transition-transform duration-150 hover:scale-[1.05] hover:bg-[#6B1CD4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6B1CD4]"
+      className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_10px_24px_-6px_rgba(22,163,74,0.55)] transition-transform duration-150 hover:scale-[1.05] hover:bg-[#1EBE5B] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#16A34A]"
     >
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366] text-white">
-        <WhatsAppIcon className="h-4 w-4" />
-      </span>
+      <WhatsAppIcon className="h-5 w-5" />
     </a>
   );
 };

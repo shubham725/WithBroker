@@ -343,8 +343,8 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
   return (
     <div className="space-y-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label htmlFor="sub-location" className="block text-xs font-semibold text-[#090A14]">
-          Property Location (Google / Live GPS / Manual) *
+        <label htmlFor="sub-location" className="block text-xs font-medium text-[#5C5E6B]">
+          Property Location *
         </label>
 
         <div className="flex items-center gap-1.5">
@@ -353,7 +353,7 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
             data-testid="detect-live-location-btn"
             onClick={handleDetectLiveLocation}
             disabled={detectingGps}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#6B1CD4] px-3 text-[11px] font-semibold text-white shadow-2xs transition-colors hover:bg-[#5412AD] disabled:opacity-60"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#090A14] px-3 text-[11px] font-semibold text-white transition-colors hover:bg-[#6B1CD4] disabled:opacity-60"
           >
             {detectingGps ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -369,8 +369,8 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
               onClick={() => setShowMapPicker((prev) => !prev)}
               className={`inline-flex h-8 items-center gap-1 rounded-lg border px-2.5 text-[11px] font-semibold transition-colors ${
                 showMapPicker
-                  ? 'border-[#6B1CD4] bg-[#F5EFFD] text-[#6B1CD4]'
-                  : 'border-[#090A14]/12 bg-white text-[#090A14] hover:border-[#6B1CD4] hover:text-[#6B1CD4]'
+                  ? 'border-[#6B1CD4] bg-[#F7F3FD] text-[#6B1CD4]'
+                  : 'border-[#090A14]/14 bg-white text-[#090A14] hover:border-[#6B1CD4] hover:text-[#6B1CD4]'
               }`}
             >
               <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
@@ -383,7 +383,7 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
       {/* Search / Manual Location Input */}
       <div className="relative">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B1CD4]"
+          className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5C5E6B]"
           aria-hidden="true"
         />
         <input
@@ -400,7 +400,7 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
           }}
           placeholder="Search Google address or type area (e.g. Viman Nagar, Pune)"
           aria-invalid={Boolean(error)}
-          className="h-11 w-full rounded-xl border border-[#090A14]/12 bg-[#F9F8FC] pl-9 pr-9 text-base text-[#090A14] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
+          className="h-11 w-full rounded-xl border border-transparent bg-[#F4F4F7] pl-10 pr-9 text-base text-[#090A14] placeholder:text-[#8A8C9B] transition-colors hover:bg-[#EEEEF3] focus:border-[#6B1CD4] focus:bg-white focus:outline-none sm:text-sm"
         />
         {searchingPlaces && (
           <Loader2
@@ -425,7 +425,7 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
                     void handleSelectSuggestion(suggestion);
                   }}
                   onClick={() => void handleSelectSuggestion(suggestion)}
-                  className="flex w-full items-start gap-2 px-3.5 py-2.5 text-left text-xs text-[#090A14] transition-colors hover:bg-[#F5EFFD]"
+                  className="flex w-full items-start gap-2 px-3.5 py-2.5 text-left text-xs text-[#090A14] transition-colors hover:bg-[#F7F3FD]"
                 >
                   <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#6B1CD4]" aria-hidden="true" />
                   <span className="leading-snug">{suggestion.placePrediction?.text.text}</span>
@@ -436,9 +436,8 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
         )}
       </div>
 
-      {/* 1-Tap Quick Pune Areas (Super fast on mobile!) */}
+      {/* 1-Tap Quick Pune Areas */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] font-medium text-[#656275]">Quick Pune areas:</span>
         {QUICK_PUNE_AREAS.map((area) => {
           const isSelected = location.toLowerCase().includes(area.label.toLowerCase());
           return (
@@ -455,10 +454,10 @@ const GoogleLocationInner: React.FC<GoogleLocationInnerProps> = ({
                   locationSource: 'manual',
                 });
               }}
-              className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-colors ${
                 isSelected
-                  ? 'border-[#6B1CD4] bg-[#6B1CD4] text-white'
-                  : 'border-[#090A14]/10 bg-[#F9F8FC] text-[#524F61] hover:border-[#6B1CD4] hover:text-[#6B1CD4]'
+                  ? 'bg-[#090A14] text-white'
+                  : 'bg-[#F4F4F7] text-[#5C5E6B] hover:bg-[#ECECF2] hover:text-[#090A14]'
               }`}
             >
               {area.label}
